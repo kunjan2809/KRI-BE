@@ -16,7 +16,6 @@ const loadYamlFile = (filePath) => {
 // Load all YAML documentation files
 const schemas = loadYamlFile(path.join(__dirname, '../docs/schemas.yaml'));
 const authEndpoints = loadYamlFile(path.join(__dirname, '../docs/auth-endpoints.yaml'));
-const exampleEndpoints = loadYamlFile(path.join(__dirname, '../docs/example-endpoints.yaml'));
 const orderEndpoints = loadYamlFile(path.join(__dirname, '../docs/order-endpoints.yaml'));
 const productEndpoints = loadYamlFile(path.join(__dirname, '../docs/product-endpoints.yaml'));
 const imageEndpoints = loadYamlFile(path.join(__dirname, '../docs/image-endpoints.yaml'));
@@ -26,37 +25,34 @@ const analyticsEndpoints = loadYamlFile(path.join(__dirname, '../docs/analytics-
 // Merge all documentation into a single Swagger spec
 const swaggerSpec = {
   ...authEndpoints,
-  components: {
-    ...authEndpoints.components,
-    schemas: {
-      ...schemas,
-      ...authEndpoints.components?.schemas,
-      ...exampleEndpoints.components?.schemas,
-      ...orderEndpoints.components?.schemas,
-      ...productEndpoints.components?.schemas,
-      ...imageEndpoints.components?.schemas,
-      ...userEndpoints.components?.schemas,
-      ...analyticsEndpoints.components?.schemas
-    }
-  },
-  paths: {
-    ...authEndpoints.paths,
-    ...exampleEndpoints.paths,
-    ...orderEndpoints.paths,
-    ...productEndpoints.paths,
-    ...imageEndpoints.paths,
-    ...userEndpoints.paths,
-    ...analyticsEndpoints.paths
-  },
-  tags: [
-    ...(authEndpoints.tags || []),
-    ...(exampleEndpoints.tags || []),
-    ...(orderEndpoints.tags || []),
-    ...(productEndpoints.tags || []),
-    ...(imageEndpoints.tags || []),
-    ...(userEndpoints.tags || []),
-    ...(analyticsEndpoints.tags || [])
-  ]
+           components: {
+           ...authEndpoints.components,
+           schemas: {
+             ...schemas,
+             ...authEndpoints.components?.schemas,
+             ...orderEndpoints.components?.schemas,
+             ...productEndpoints.components?.schemas,
+             ...imageEndpoints.components?.schemas,
+             ...userEndpoints.components?.schemas,
+             ...analyticsEndpoints.components?.schemas
+           }
+         },
+           paths: {
+           ...authEndpoints.paths,
+           ...orderEndpoints.paths,
+           ...productEndpoints.paths,
+           ...imageEndpoints.paths,
+           ...userEndpoints.paths,
+           ...analyticsEndpoints.paths
+         },
+           tags: [
+           ...(authEndpoints.tags || []),
+           ...(orderEndpoints.tags || []),
+           ...(productEndpoints.tags || []),
+           ...(imageEndpoints.tags || []),
+           ...(userEndpoints.tags || []),
+           ...(analyticsEndpoints.tags || [])
+         ]
 };
 
 module.exports = swaggerSpec; 
