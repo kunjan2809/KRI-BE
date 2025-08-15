@@ -68,8 +68,8 @@ const productSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: {
-      values: ['draft', 'published', 'hidden'],
-      message: 'Status must be either "draft", "published", or "hidden"'
+      values: ['draft', 'published', 'hidden', 'deleted'],
+      message: 'Status must be either "draft", "published", "hidden", or "deleted"'
     },
     default: 'draft'
   },
@@ -77,6 +77,10 @@ const productSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
     required: [true, 'Category is required']
+  },
+  deleted_at: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: {
@@ -90,6 +94,7 @@ productSchema.index({ sku: 1 });
 productSchema.index({ category_id: 1 });
 productSchema.index({ status: 1 });
 productSchema.index({ price: 1 });
+productSchema.index({ deleted_at: 1 }); // Index for soft delete queries
 productSchema.index({ name: 'text', description: 'text' }); // Text search index
 
 // Virtual for final price after discount
@@ -130,6 +135,11 @@ productSchema.virtual('in_stock').get(function() {
 // Virtual for low stock warning
 productSchema.virtual('low_stock').get(function() {
   return this.stock_quantity > 0 && this.stock_quantity <= 10;
+});
+
+// Virtual for is deleted
+productSchema.virtual('is_deleted').get(function() {
+  return this.deleted_at !== null || this.status === 'deleted';
 });
 
 // Ensure virtual fields are serialized

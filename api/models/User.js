@@ -22,7 +22,6 @@ const userSchema = new mongoose.Schema({
     trim: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
-
   mobile_number: {
     type: String,
     unique: true,
@@ -34,6 +33,20 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Password is required'],
     minlength: [6, 'Password must be at least 6 characters long']
+  },
+  profile_icon: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Profile icon URL cannot exceed 500 characters'],
+    default: null
+  },
+  status: {
+    type: String,
+    enum: {
+      values: ['active', 'banned'],
+      message: 'Status must be either "active" or "banned"'
+    },
+    default: 'active'
   },
   is_admin: {
     type: Boolean,
@@ -57,6 +70,9 @@ const userSchema = new mongoose.Schema({
 // Index for better query performance
 userSchema.index({ email: 1 });
 userSchema.index({ mobile_number: 1 });
+userSchema.index({ status: 1 });
+userSchema.index({ first_name: 1, last_name: 1 }); // For name search
+userSchema.index({ is_admin: 1 }); // For filtering out admin users
 
 // Virtual for full name
 userSchema.virtual('full_name').get(function() {

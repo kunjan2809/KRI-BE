@@ -1,0 +1,466 @@
+openapi: 3.0.0
+info:
+  title: E-Commerce User Management API
+  description: Admin-only APIs for managing users and viewing user statistics
+  version: 1.0.0
+  contact:
+    name: E-Commerce Backend Team
+    email: support@ecommerce.com
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.ecommerce.com
+    description: Production server
+
+tags:
+  - name: User Management
+    description: Admin APIs for managing users, viewing statistics, and changing user status
+
+paths:
+  /api/users/admin/all:
+    get:
+      tags:
+        - User Management
+      summary: Get All Users with Order Statistics
+      description: |
+        Retrieve all non-admin users with comprehensive details including order statistics.
+        Supports pagination, search by name, and filtering by status.
+        Returns order counts, total values, and return statistics for each user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Number of users per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          example: 20
+        - name: search
+          in: query
+          description: Search term for user name (first name or last name)
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: "john"
+        - name: status_filter
+          in: query
+          description: Filter users by status
+          required: false
+          schema:
+            type: string
+            enum: ['active', 'banned']
+          example: "active"
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+              example:
+                success: true
+                data:
+                  users:
+                    - _id: "507f1f77bcf86cd799439011"
+                      first_name: "John"
+                      last_name: "Doe"
+                      email: "john.doe@example.com"
+                      mobile_number: "+1234567890"
+                      profile_icon: "https://example.com/avatar.jpg"
+                      status: "active"
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      order_statistics:
+                        total_orders: 5
+                        total_order_value: 299.99
+                        returned_orders: 1
+                        returned_orders_value: 59.99
+                    - _id: "507f1f77bcf86cd799439012"
+                      first_name: "Jane"
+                      last_name: "Smith"
+                      email: "jane.smith@example.com"
+                      mobile_number: "+1987654321"
+                      profile_icon: null
+                      status: "active"
+                      created_at: "2024-01-14T15:45:00.000Z"
+                      order_statistics:
+                        total_orders: 0
+                        total_order_value: 0
+                        returned_orders: 0
+                        returned_orders_value: 0
+                  pagination:
+                    current_page: 1
+                    total_pages: 3
+                    total_users: 45
+                    limit: 20
+                  filters:
+                    search: "john"
+                    status_filter: "active"
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/admin/status/{userId}:
+    patch:
+      tags:
+        - User Management
+      summary: Change User Status
+      description: |
+        Change a user's status between "active" and "banned".
+        Cannot change status of admin users.
+        Requires admin authentication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          description: User ID to change status for
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserStatusUpdateRequest'
+            example:
+              status: "banned"
+      responses:
+        '200':
+          description: User status changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStatusUpdateResponse'
+              example:
+                success: true
+                message: "User status changed to banned successfully"
+                data:
+                  user:
+                    id: "507f1f77bcf86cd799439011"
+                    first_name: "John"
+                    last_name: "Doe"
+                    email: "john.doe@example.com"
+                    status: "banned"
+                    updated_at: "2024-01-15T16:30:00.000Z"
+        '400':
+          description: Bad request - invalid status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Status must be either \"active\" or \"banned\""
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Cannot change admin user status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Cannot change status of admin users"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for admin authentication
+
+  schemas:
+    # User List Response
+    UserListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        data:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserWithStats'
+            pagination:
+              $ref: '#/components/schemas/PaginationInfo'
+            filters:
+              $ref: '#/components/schemas/UserFilters'
+          required:
+            - users
+            - pagination
+            - filters
+      required:
+        - success
+        - data
+
+    # User with Order Statistics
+    UserWithStats:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique user identifier
+          example: "507f1f77bcf86cd799439011"
+        first_name:
+          type: string
+          description: User's first name
+          maxLength: 50
+          example: "John"
+        last_name:
+          type: string
+          description: User's last name
+          maxLength: 50
+          example: "Doe"
+        email:
+          type: string
+          description: User's email address
+          format: email
+          example: "john.doe@example.com"
+        mobile_number:
+          type: string
+          description: User's mobile number
+          maxLength: 15
+          example: "+1234567890"
+        profile_icon:
+          type: string
+          description: URL to user's profile icon
+          maxLength: 500
+          nullable: true
+          example: "https://example.com/avatar.jpg"
+        status:
+          type: string
+          enum: ['active', 'banned']
+          description: User account status
+          example: "active"
+        created_at:
+          type: string
+          format: date-time
+          description: User account creation timestamp
+          example: "2024-01-15T10:30:00.000Z"
+        order_statistics:
+          $ref: '#/components/schemas/OrderStatistics'
+      required:
+        - _id
+        - first_name
+        - last_name
+        - email
+        - status
+        - created_at
+        - order_statistics
+
+    # Order Statistics
+    OrderStatistics:
+      type: object
+      properties:
+        total_orders:
+          type: integer
+          description: Total number of orders (excluding cancelled)
+          minimum: 0
+          example: 5
+        total_order_value:
+          type: number
+          description: Total value of all orders
+          minimum: 0
+          example: 299.99
+        returned_orders:
+          type: integer
+          description: Number of returned orders
+          minimum: 0
+          example: 1
+        returned_orders_value:
+          type: number
+          description: Total value of returned orders
+          minimum: 0
+          example: 59.99
+      required:
+        - total_orders
+        - total_order_value
+        - returned_orders
+        - returned_orders_value
+
+    # Pagination Info
+    PaginationInfo:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          description: Current page number
+          minimum: 1
+          example: 1
+        total_pages:
+          type: integer
+          description: Total number of pages
+          minimum: 1
+          example: 3
+        total_users:
+          type: integer
+          description: Total number of users
+          minimum: 0
+          example: 45
+        limit:
+          type: integer
+          description: Number of users per page
+          minimum: 1
+          example: 20
+      required:
+        - current_page
+        - total_pages
+        - total_users
+        - limit
+
+    # User Filters
+    UserFilters:
+      type: object
+      properties:
+        search:
+          type: string
+          description: Search term used
+          nullable: true
+          example: "john"
+        status_filter:
+          type: string
+          enum: ['active', 'banned']
+          description: Status filter applied
+          nullable: true
+          example: "active"
+      required:
+        - search
+        - status_filter
+
+    # User Status Update Request
+    UserStatusUpdateRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ['active', 'banned']
+          description: New status for the user
+          example: "banned"
+      required:
+        - status
+
+    # User Status Update Response
+    UserStatusUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "User status changed to banned successfully"
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/UserStatusUpdateData'
+          required:
+            - user
+      required:
+        - success
+        - message
+        - data
+
+    # User Status Update Data
+    UserStatusUpdateData:
+      type: object
+      properties:
+        id:
+          type: string
+          description: User ID
+          example: "507f1f77bcf86cd799439011"
+        first_name:
+          type: string
+          description: User's first name
+          example: "John"
+        last_name:
+          type: string
+          description: User's last name
+          example: "Doe"
+        email:
+          type: string
+          description: User's email address
+          example: "john.doe@example.com"
+        status:
+          type: string
+          enum: ['active', 'banned']
+          description: Updated user status
+          example: "banned"
+        updated_at:
+          type: string
+          format: date-time
+          description: Status update timestamp
+          example: "2024-01-15T16:30:00.000Z"
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - status
+        - updated_at
+
+    # Error Response
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: "An error occurred"
+      required:
+        - success
+        - message 

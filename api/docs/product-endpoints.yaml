@@ -1,0 +1,669 @@
+openapi: 3.0.0
+info:
+  title: E-Commerce Product Management API
+  description: Admin-only APIs for managing products in the e-commerce system
+  version: 1.0.0
+  contact:
+    name: E-Commerce Backend Team
+    email: support@ecommerce.com
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.ecommerce.com
+    description: Production server
+
+tags:
+  - name: Product Management
+    description: Admin APIs for managing products, inventory, and reviews
+
+paths:
+  /api/products/admin/all:
+    get:
+      tags:
+        - Product Management
+      summary: Get All Products with Filters
+      description: |
+        Retrieve all products with advanced filtering, search, pagination, and sorting capabilities.
+        Supports stock level filters, status filters, and search by name/SKU/category.
+        Returns products with primary images for list display.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Number of products per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+        - name: stock_filters
+          in: query
+          description: Stock level filters (can combine multiple)
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: ['in_stock', 'low_stock', 'out_of_stock']
+            example: ['in_stock', 'low_stock']
+          style: form
+          explode: true
+        - name: status_filters
+          in: query
+          description: Product status filters (can combine multiple)
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: ['published', 'draft']
+            example: ['published']
+          style: form
+          explode: true
+        - name: search
+          in: query
+          description: Search term for product name, SKU, or category ID
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: "iphone"
+        - name: sort_by
+          in: query
+          description: Field to sort by
+          required: false
+          schema:
+            type: string
+            enum: ['created_at', 'name', 'price', 'stock_quantity', 'sku']
+            default: 'created_at'
+          example: "created_at"
+        - name: sort_order
+          in: query
+          description: Sort order
+          required: false
+          schema:
+            type: string
+            enum: ['asc', 'desc']
+            default: 'desc'
+          example: "desc"
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+              example:
+                success: true
+                data:
+                  products:
+                    - _id: "507f1f77bcf86cd799439011"
+                      name: "iPhone 15 Pro"
+                      sku: "IPHONE15PRO-256GB"
+                      description: "Latest iPhone with advanced features"
+                      price: 999.99
+                      discount_type: null
+                      discount_rate: 0
+                      stock_quantity: 75
+                      color: "Titanium"
+                      weight: 0.187
+                      status: "published"
+                      category_id:
+                        _id: "507f1f77bcf86cd799439012"
+                        name: "Electronics"
+                      deleted_at: null
+                      final_price: 999.99
+                      discount_amount: 0
+                      in_stock: true
+                      low_stock: false
+                      is_deleted: false
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      edited_at: "2024-01-15T10:30:00.000Z"
+                      primary_image:
+                        _id: "507f1f77bcf86cd799439013"
+                        product_id: "507f1f77bcf86cd799439011"
+                        image_url: "/images/products/iphone15pro-1.jpg"
+                        alt_text: "iPhone 15 Pro front view"
+                        is_primary: true
+                        sort_order: 1
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        edited_at: "2024-01-15T10:30:00.000Z"
+                  pagination:
+                    current_page: 1
+                    total_pages: 5
+                    total_products: 100
+                    limit: 20
+                  filters:
+                    stock_filters: ["in_stock", "low_stock"]
+                    status_filters: ["published"]
+                    search: "iphone"
+                  sorting:
+                    sort_by: "created_at"
+                    sort_order: "desc"
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/products/admin/add:
+    post:
+      tags:
+        - Product Management
+      summary: Add New Product
+      description: |
+        Create a new product with all required fields.
+        Validates SKU uniqueness and category existence.
+        Returns the created product with primary image.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreationRequest'
+            example:
+              name: "iPhone 15 Pro"
+              sku: "IPHONE15PRO-256GB"
+              description: "Latest iPhone with advanced features and titanium design"
+              price: 999.99
+              discount_type: null
+              discount_rate: 0
+              stock_quantity: 100
+              color: "Titanium"
+              weight: 0.187
+              status: "draft"
+              category_id: "507f1f77bcf86cd799439012"
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCreationResponse'
+              example:
+                success: true
+                message: "Product created successfully"
+                data:
+                  product:
+                    _id: "507f1f77bcf86cd799439011"
+                    name: "iPhone 15 Pro"
+                    sku: "IPHONE15PRO-256GB"
+                    description: "Latest iPhone with advanced features and titanium design"
+                    price: 999.99
+                    discount_type: null
+                    discount_rate: 0
+                    stock_quantity: 100
+                    color: "Titanium"
+                    weight: 0.187
+                    status: "draft"
+                    category_id:
+                      _id: "507f1f77bcf86cd799439012"
+                      name: "Electronics"
+                    deleted_at: null
+                    final_price: 999.99
+                    discount_amount: 0
+                    in_stock: true
+                    low_stock: false
+                    is_deleted: false
+                    created_at: "2024-01-15T10:30:00.000Z"
+                    edited_at: "2024-01-15T10:30:00.000Z"
+                    primary_image: null
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Product with this SKU already exists"
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/products/admin/edit/{productId}:
+    put:
+      tags:
+        - Product Management
+      summary: Edit Existing Product
+      description: |
+        Update an existing product. Only provided fields are updated.
+        Unspecified fields remain unchanged.
+        Validates SKU uniqueness and category existence if updated.
+        Returns the updated product with primary image.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to update
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdateRequest'
+            example:
+              name: "iPhone 15 Pro Max"
+              price: 1099.99
+              stock_quantity: 150
+              status: "published"
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductUpdateResponse'
+              example:
+                success: true
+                message: "Product updated successfully"
+                data:
+                  product:
+                    _id: "507f1f77bcf86cd799439011"
+                    name: "iPhone 15 Pro Max"
+                    sku: "IPHONE15PRO-256GB"
+                    description: "Latest iPhone with advanced features and titanium design"
+                    price: 1099.99
+                    discount_type: null
+                    discount_rate: 0
+                    stock_quantity: 150
+                    color: "Titanium"
+                    weight: 0.187
+                    status: "published"
+                    category_id:
+                      _id: "507f1f77bcf86cd799439012"
+                      name: "Electronics"
+                    deleted_at: null
+                    final_price: 1099.99
+                    discount_amount: 0
+                    in_stock: true
+                    low_stock: false
+                    is_deleted: false
+                    created_at: "2024-01-15T10:30:00.000Z"
+                    edited_at: "2024-01-15T10:30:00.000Z"
+                    primary_image:
+                      _id: "507f1f77bcf86cd799439013"
+                      product_id: "507f1f77bcf86cd799439011"
+                      image_url: "/images/products/iphone15pro-1.jpg"
+                      alt_text: "iPhone 15 Pro front view"
+                      is_primary: true
+                      sort_order: 1
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      edited_at: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Product with this SKU already exists"
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/products/admin/delete/{productId}:
+    delete:
+      tags:
+        - Product Management
+      summary: Soft Delete Product
+      description: |
+        Soft delete a product by setting deleted_at timestamp and status to 'deleted'.
+        Soft-deleted products are excluded from all product queries.
+        This operation is irreversible through this API.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to delete
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Product deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: "Product deleted successfully"
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/products/admin/details/{productId}:
+    get:
+      tags:
+        - Product Management
+      summary: View Product Details
+      description: |
+        Get comprehensive product details including all product data,
+        all associated product images, and complete review information.
+        Returns review summary (count, average rating) and detailed review data
+        with user metadata and review images.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to view details
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Product details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailsResponse'
+              example:
+                success: true
+                data:
+                  product:
+                    product:
+                      _id: "507f1f77bcf86cd799439011"
+                      name: "iPhone 15 Pro"
+                      sku: "IPHONE15PRO-256GB"
+                      description: "Latest iPhone with advanced features and titanium design"
+                      price: 999.99
+                      discount_type: null
+                      discount_rate: 0
+                      stock_quantity: 75
+                      color: "Titanium"
+                      weight: 0.187
+                      status: "published"
+                      category_id:
+                        _id: "507f1f77bcf86cd799439012"
+                        name: "Electronics"
+                      deleted_at: null
+                      final_price: 999.99
+                      discount_amount: 0
+                      in_stock: true
+                      low_stock: false
+                      is_deleted: false
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      edited_at: "2024-01-15T10:30:00.000Z"
+                    images:
+                      - _id: "507f1f77bcf86cd799439013"
+                        product_id: "507f1f77bcf86cd799439011"
+                        image_url: "/images/products/iphone15pro-1.jpg"
+                        alt_text: "iPhone 15 Pro front view"
+                        is_primary: true
+                        sort_order: 1
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        edited_at: "2024-01-15T10:30:00.000Z"
+                      - _id: "507f1f77bcf86cd799439014"
+                        product_id: "507f1f77bcf86cd799439011"
+                        image_url: "/images/products/iphone15pro-2.jpg"
+                        alt_text: "iPhone 15 Pro back view"
+                        is_primary: false
+                        sort_order: 2
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        edited_at: "2024-01-15T10:30:00.000Z"
+                  reviews:
+                    summary:
+                      averageRating: 4.5
+                      totalReviews: 12
+                    details:
+                      - _id: "507f1f77bcf86cd799439015"
+                        product_id: "507f1f77bcf86cd799439011"
+                        user_id:
+                          _id: "507f1f77bcf86cd799439016"
+                          first_name: "John"
+                          last_name: "Doe"
+                          email: "john.doe@example.com"
+                          mobile_number: "+1234567890"
+                          is_admin: false
+                          full_name: "John Doe"
+                          created_at: "2024-01-10T08:00:00.000Z"
+                          edited_at: "2024-01-10T08:00:00.000Z"
+                        rating: 5
+                        rating_description: "Excellent product! The quality is outstanding and delivery was super fast."
+                        order_id: "507f1f77bcf86cd799439017"
+                        created_at: "2024-01-14T15:30:00.000Z"
+                        edited_at: "2024-01-14T15:30:00.000Z"
+                        images:
+                          - _id: "507f1f77bcf86cd799439018"
+                            review_id: "507f1f77bcf86cd799439015"
+                            image_url: "/images/reviews/review-1.jpg"
+                            created_at: "2024-01-14T15:30:00.000Z"
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/products/admin/quantity/{productId}:
+    patch:
+      tags:
+        - Product Management
+      summary: Update Product Quantity
+      description: |
+        Update the stock quantity of a specific product.
+        Only accepts positive integers (0 or greater).
+        Returns the product ID and new quantity.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to update quantity
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductQuantityUpdateRequest'
+            example:
+              quantity: 100
+      responses:
+        '200':
+          description: Product quantity updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductQuantityUpdateResponse'
+              example:
+                success: true
+                message: "Product quantity updated successfully"
+                data:
+                  product_id: "507f1f77bcf86cd799439011"
+                  new_quantity: 100
+        '400':
+          description: Bad request - invalid quantity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Valid quantity is required (must be >= 0)"
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/products/admin/status/{productId}:
+    patch:
+      tags:
+        - Product Management
+      summary: Change Product Status
+      description: |
+        Update the status of a specific product.
+        Valid statuses: draft, published, hidden.
+        Returns the product ID and new status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to update status
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductStatusUpdateRequest'
+            example:
+              status: "published"
+      responses:
+        '200':
+          description: Product status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductStatusUpdateResponse'
+              example:
+                success: true
+                message: "Product status updated successfully"
+                data:
+                  product_id: "507f1f77bcf86cd799439011"
+                  new_status: "published"
+        '400':
+          description: Bad request - invalid status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Valid status is required (draft, published, or hidden)"
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for admin authentication 

@@ -3,12 +3,16 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const rateLimiter = require("./middlewares/rateLimiter");
 const cors = require("cors");
+const path = require("path");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const authRoutes = require("./routes/authRoutes");
 const exampleRoutes = require("./routes/exampleRoutes");
-// const productRoutes = require("./routes/productRoutes");
-// const userRoutes = require("./routes/userRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const productRoutes = require("./routes/productRoutes");
+const imageRoutes = require("./routes/imageRoutes");
+const userRoutes = require("./routes/userRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 
 const app = express();
 
@@ -19,6 +23,9 @@ app.use(morgan("dev")); // Logging
 app.use(helmet()); // Security headers
 app.use(rateLimiter); // Rate limiter
 
+// Static file serving for images
+app.use('/static', express.static(path.join(__dirname, '../static')));
+
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
   customCss: '.swagger-ui .topbar { display: none }',
@@ -28,8 +35,11 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/example", exampleRoutes);
-// app.use("/api/products", productRoutes);
-// app.use("/api/users", userRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/images", imageRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // Global error handler (optional)
 app.use((err, req, res, next) => {
