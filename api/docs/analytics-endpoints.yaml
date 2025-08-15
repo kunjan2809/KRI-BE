@@ -1,0 +1,881 @@
+openapi: 3.0.0
+info:
+  title: E-Commerce Analytics API
+  description: Admin-only APIs for analytics and dashboard data
+  version: 1.0.0
+  contact:
+    name: E-Commerce Backend Team
+    email: support@ecommerce.com
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.ecommerce.com
+    description: Production server
+
+tags:
+  - name: Analytics
+    description: Admin APIs for analytics, dashboard data, and business insights
+
+paths:
+  /api/analytics/orders:
+    get:
+      tags:
+        - Analytics
+      summary: Get Order Analytics
+      description: |
+        Returns order analytics comparing current month (1st to current day) 
+        with previous month (1st to last day). Includes order counts and revenue.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Order analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderAnalyticsResponse'
+              example:
+                success: true
+                data:
+                  current_month:
+                    period:
+                      start: "2024-01-01T00:00:00.000Z"
+                      end: "2024-01-15T16:30:00.000Z"
+                    orders_count: 45
+                    total_revenue: 1250.75
+                  previous_month:
+                    period:
+                      start: "2023-12-01T00:00:00.000Z"
+                      end: "2023-12-31T23:59:59.999Z"
+                    orders_count: 89
+                    total_revenue: 2340.50
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/analytics/users:
+    get:
+      tags:
+        - Analytics
+      summary: Get User Analytics
+      description: |
+        Returns user registration analytics comparing current month (1st to current day) 
+        with previous month (1st to last day). Shows user registration counts.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAnalyticsResponse'
+              example:
+                success: true
+                data:
+                  current_month:
+                    period:
+                      start: "2024-01-01T00:00:00.000Z"
+                      end: "2024-01-15T16:30:00.000Z"
+                    users_registered: 23
+                  previous_month:
+                    period:
+                      start: "2023-12-01T00:00:00.000Z"
+                      end: "2023-12-31T23:59:59.999Z"
+                    users_registered: 67
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/analytics/categories:
+    get:
+      tags:
+        - Analytics
+      summary: Get Category Order Analytics
+      description: |
+        Returns current month order counts by product category. 
+        Associates orders to categories via products in order items.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Category analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAnalyticsResponse'
+              example:
+                success: true
+                data:
+                  period:
+                    start: "2024-01-01T00:00:00.000Z"
+                    end: "2024-01-15T16:30:00.000Z"
+                  categories:
+                    - category:
+                        _id: "507f1f77bcf86cd799439011"
+                        name: "Electronics"
+                        description: "Electronic devices and gadgets"
+                      order_count: 15
+                    - category:
+                        _id: "507f1f77bcf86cd799439012"
+                        name: "Clothing"
+                        description: "Apparel and accessories"
+                      order_count: 8
+                    - category:
+                        _id: "507f1f77bcf86cd799439013"
+                        name: "Books"
+                        description: "Books and publications"
+                      order_count: 3
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/analytics/yearly/{year}:
+    get:
+      tags:
+        - Analytics
+      summary: Get Yearly Order Analytics
+      description: |
+        Returns monthly order counts for the specified year and previous year 
+        for comparison. January through December data.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: year
+          in: path
+          description: Year to get analytics for
+          required: true
+          schema:
+            type: integer
+            minimum: 2020
+            maximum: 2030
+          example: 2024
+      responses:
+        '200':
+          description: Yearly analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YearlyAnalyticsResponse'
+              example:
+                success: true
+                data:
+                  target_year: 2024
+                  previous_year: 2023
+                  monthly_data:
+                    - month: "January"
+                      month_number: 1
+                      target_year_count: 45
+                      previous_year_count: 38
+                    - month: "February"
+                      month_number: 2
+                      target_year_count: 52
+                      previous_year_count: 41
+        '400':
+          description: Bad request - invalid year
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/analytics/dashboard:
+    get:
+      tags:
+        - Analytics
+      summary: Get Dashboard Summary
+      description: |
+        Returns latest 5 orders, products, and payments with full details.
+        For products includes associated images, for orders includes order items,
+        addresses, and delivery info.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummaryResponse'
+              example:
+                success: true
+                data:
+                  latest_orders:
+                    - _id: "507f1f77bcf86cd799439011"
+                      order_status: "delivered"
+                      total_amount: 299.99
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      user_id:
+                        _id: "507f1f77bcf86cd799439012"
+                        first_name: "John"
+                        last_name: "Doe"
+                        email: "john@example.com"
+                      order_items: [...]
+                      delivery: {...}
+                  latest_products:
+                    - _id: "507f1f77bcf86cd799439013"
+                      name: "iPhone 15 Pro"
+                      price: 999.99
+                      images: [...]
+                  latest_payments: [...]
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/analytics/revenue:
+    get:
+      tags:
+        - Analytics
+      summary: Get Monthly Revenue
+      description: |
+        Returns current month revenue breakdown including total orders, 
+        total revenue, returned orders count, and returned orders revenue.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Monthly revenue retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyRevenueResponse'
+              example:
+                success: true
+                data:
+                  period:
+                    start: "2024-01-01T00:00:00.000Z"
+                    end: "2024-01-15T16:30:00.000Z"
+                  total_orders: 45
+                  total_revenue: 1250.75
+                  returned_orders: 3
+                  returned_orders_revenue: 89.99
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for admin authentication
+
+  schemas:
+    # Order Analytics Response
+    OrderAnalyticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        data:
+          type: object
+          properties:
+            current_month:
+              $ref: '#/components/schemas/MonthlyOrderData'
+            previous_month:
+              $ref: '#/components/schemas/MonthlyOrderData'
+          required:
+            - current_month
+            - previous_month
+      required:
+        - success
+        - data
+
+    # Monthly Order Data
+    MonthlyOrderData:
+      type: object
+      properties:
+        period:
+          $ref: '#/components/schemas/DatePeriod'
+        orders_count:
+          type: integer
+          description: Number of orders in the period
+          minimum: 0
+          example: 45
+        total_revenue:
+          type: number
+          description: Total revenue for the period
+          minimum: 0
+          example: 1250.75
+      required:
+        - period
+        - orders_count
+        - total_revenue
+
+    # User Analytics Response
+    UserAnalyticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        data:
+          type: object
+          properties:
+            current_month:
+              $ref: '#/components/schemas/MonthlyUserData'
+            previous_month:
+              $ref: '#/components/schemas/MonthlyUserData'
+          required:
+            - current_month
+            - previous_month
+      required:
+        - success
+        - data
+
+    # Monthly User Data
+    MonthlyUserData:
+      type: object
+      properties:
+        period:
+          $ref: '#/components/schemas/DatePeriod'
+        users_registered:
+          type: integer
+          description: Number of users registered in the period
+          minimum: 0
+          example: 23
+      required:
+        - period
+        - users_registered
+
+    # Category Analytics Response
+    CategoryAnalyticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        data:
+          type: object
+          properties:
+            period:
+              $ref: '#/components/schemas/DatePeriod'
+            categories:
+              type: array
+              items:
+                $ref: '#/components/schemas/CategoryOrderData'
+          required:
+            - period
+            - categories
+      required:
+        - success
+        - data
+
+    # Category Order Data
+    CategoryOrderData:
+      type: object
+      properties:
+        category:
+          $ref: '#/components/schemas/CategoryInfo'
+        order_count:
+          type: integer
+          description: Number of orders for this category
+          minimum: 0
+          example: 15
+      required:
+        - category
+        - order_count
+
+    # Category Info
+    CategoryInfo:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Category ID
+          example: "507f1f77bcf86cd799439011"
+        name:
+          type: string
+          description: Category name
+          example: "Electronics"
+        description:
+          type: string
+          description: Category description
+          example: "Electronic devices and gadgets"
+      required:
+        - _id
+        - name
+
+    # Yearly Analytics Response
+    YearlyAnalyticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        data:
+          type: object
+          properties:
+            target_year:
+              type: integer
+              description: Target year for analytics
+              example: 2024
+            previous_year:
+              type: integer
+              description: Previous year for comparison
+              example: 2023
+            monthly_data:
+              type: array
+              items:
+                $ref: '#/components/schemas/MonthlyYearlyData'
+          required:
+            - target_year
+            - previous_year
+            - monthly_data
+      required:
+        - success
+        - data
+
+    # Monthly Yearly Data
+    MonthlyYearlyData:
+      type: object
+      properties:
+        month:
+          type: string
+          description: Month name
+          example: "January"
+        month_number:
+          type: integer
+          description: Month number (1-12)
+          minimum: 1
+          maximum: 12
+          example: 1
+        target_year_count:
+          type: integer
+          description: Order count for target year
+          minimum: 0
+          example: 45
+        previous_year_count:
+          type: integer
+          description: Order count for previous year
+          minimum: 0
+          example: 38
+      required:
+        - month
+        - month_number
+        - target_year_count
+        - previous_year_count
+
+    # Dashboard Summary Response
+    DashboardSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        data:
+          type: object
+          properties:
+            latest_orders:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrderWithDetails'
+            latest_products:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductWithImages'
+            latest_payments:
+              type: array
+              items:
+                $ref: '#/components/schemas/PaymentWithOrder'
+          required:
+            - latest_orders
+            - latest_products
+            - latest_payments
+      required:
+        - success
+        - data
+
+    # Order With Details
+    OrderWithDetails:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Order ID
+          example: "507f1f77bcf86cd799439011"
+        order_status:
+          type: string
+          description: Order status
+          example: "delivered"
+        total_amount:
+          type: number
+          description: Order total amount
+          example: 299.99
+        created_at:
+          type: string
+          format: date-time
+          description: Order creation timestamp
+          example: "2024-01-15T10:30:00.000Z"
+        user_id:
+          $ref: '#/components/schemas/UserBasicInfo'
+        order_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemBasic'
+        delivery:
+          $ref: '#/components/schemas/DeliveryInfo'
+          nullable: true
+      required:
+        - _id
+        - order_status
+        - total_amount
+        - created_at
+
+    # User Basic Info
+    UserBasicInfo:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: User ID
+          example: "507f1f77bcf86cd799439012"
+        first_name:
+          type: string
+          description: User's first name
+          example: "John"
+        last_name:
+          type: string
+          description: User's last name
+          example: "Doe"
+        email:
+          type: string
+          description: User's email
+          example: "john@example.com"
+      required:
+        - _id
+        - first_name
+        - last_name
+        - email
+
+    # Order Item Basic
+    OrderItemBasic:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Order item ID
+          example: "507f1f77bcf86cd799439013"
+        product_name_snapshot:
+          type: string
+          description: Product name at time of order
+          example: "iPhone 15 Pro"
+        quantity:
+          type: integer
+          description: Quantity ordered
+          example: 1
+        price:
+          type: number
+          description: Final price per item
+          example: 299.99
+      required:
+        - _id
+        - product_name_snapshot
+        - quantity
+        - price
+
+    # Delivery Info
+    DeliveryInfo:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Delivery ID
+          example: "507f1f77bcf86cd799439014"
+        delivery_by:
+          type: string
+          description: Delivery company name
+          example: "FedEx"
+        speed:
+          type: string
+          description: Delivery speed
+          example: "standard"
+        tracking_number:
+          type: string
+          description: Tracking number
+          example: "1234567890"
+      required:
+        - _id
+        - delivery_by
+        - speed
+        - tracking_number
+
+    # Product With Images
+    ProductWithImages:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Product ID
+          example: "507f1f77bcf86cd799439013"
+        name:
+          type: string
+          description: Product name
+          example: "iPhone 15 Pro"
+        price:
+          type: number
+          description: Product price
+          example: 999.99
+        status:
+          type: string
+          description: Product status
+          example: "published"
+        category_id:
+          $ref: '#/components/schemas/CategoryBasic'
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImageBasic'
+      required:
+        - _id
+        - name
+        - price
+        - status
+
+    # Category Basic
+    CategoryBasic:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Category ID
+          example: "507f1f77bcf86cd799439011"
+        name:
+          type: string
+          description: Category name
+          example: "Electronics"
+      required:
+        - _id
+        - name
+
+    # Product Image Basic
+    ProductImageBasic:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Image ID
+          example: "507f1f77bcf86cd799439015"
+        image_url:
+          type: string
+          description: Image URL
+          example: "/static/images/product/iphone15pro.jpg"
+        is_primary:
+          type: boolean
+          description: Whether this is the primary image
+          example: true
+      required:
+        - _id
+        - image_url
+        - is_primary
+
+    # Payment With Order
+    PaymentWithOrder:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/OrderBasic'
+        payment:
+          $ref: '#/components/schemas/PaymentBasic'
+      required:
+        - order
+        - payment
+
+    # Order Basic
+    OrderBasic:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Order ID
+          example: "507f1f77bcf86cd799439011"
+        order_status:
+          type: string
+          description: Order status
+          example: "delivered"
+        total_amount:
+          type: number
+          description: Order total amount
+          example: 299.99
+        created_at:
+          type: string
+          format: date-time
+          description: Order creation timestamp
+          example: "2024-01-15T10:30:00.000Z"
+      required:
+        - _id
+        - order_status
+        - total_amount
+        - created_at
+
+    # Payment Basic
+    PaymentBasic:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Payment ID
+          example: "507f1f77bcf86cd799439016"
+        amount:
+          type: number
+          description: Payment amount
+          example: 299.99
+        method:
+          type: string
+          description: Payment method
+          example: "card"
+        status:
+          type: string
+          description: Payment status
+          example: "success"
+        payment_reference_id:
+          type: string
+          description: Payment reference ID
+          example: "PAY123456789"
+      required:
+        - _id
+        - amount
+        - method
+        - status
+        - payment_reference_id
+
+    # Monthly Revenue Response
+    MonthlyRevenueResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        data:
+          type: object
+          properties:
+            period:
+              $ref: '#/components/schemas/DatePeriod'
+            total_orders:
+              type: integer
+              description: Total orders in current month
+              minimum: 0
+              example: 45
+            total_revenue:
+              type: number
+              description: Total revenue in current month
+              minimum: 0
+              example: 1250.75
+            returned_orders:
+              type: integer
+              description: Number of returned orders
+              minimum: 0
+              example: 3
+            returned_orders_revenue:
+              type: number
+              description: Revenue from returned orders
+              minimum: 0
+              example: 89.99
+          required:
+            - period
+            - total_orders
+            - total_revenue
+            - returned_orders
+            - returned_orders_revenue
+      required:
+        - success
+        - data
+
+    # Date Period
+    DatePeriod:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+          description: Period start date
+          example: "2024-01-01T00:00:00.000Z"
+        end:
+          type: string
+          format: date-time
+          description: Period end date
+          example: "2024-01-15T16:30:00.000Z"
+      required:
+        - start
+        - end
+
+    # Error Response
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: "An error occurred"
+      required:
+        - success
+        - message 

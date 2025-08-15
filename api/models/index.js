@@ -7,6 +7,9 @@ const Order = require('./Order');
 const OrderItem = require('./OrderItem');
 const Payment = require('./Payment');
 const ReturnRequest = require('./ReturnRequest');
+const Delivery = require('./Delivery');
+const ProductReview = require('./ProductReview');
+const ReviewImage = require('./ReviewImage');
 
 module.exports = {
   User,
@@ -17,5 +20,8 @@ module.exports = {
   Order,
   OrderItem,
   Payment,
-  ReturnRequest
+  ReturnRequest,
+  Delivery,
+  ProductReview,
+  ReviewImage
 }; 

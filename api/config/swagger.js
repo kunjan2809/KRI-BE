@@ -13,36 +13,49 @@ const loadYamlFile = (filePath) => {
   }
 };
 
-// Load all documentation files
+// Load all YAML documentation files
 const schemas = loadYamlFile(path.join(__dirname, '../docs/schemas.yaml'));
 const authEndpoints = loadYamlFile(path.join(__dirname, '../docs/auth-endpoints.yaml'));
 const exampleEndpoints = loadYamlFile(path.join(__dirname, '../docs/example-endpoints.yaml'));
+const orderEndpoints = loadYamlFile(path.join(__dirname, '../docs/order-endpoints.yaml'));
+const productEndpoints = loadYamlFile(path.join(__dirname, '../docs/product-endpoints.yaml'));
+const imageEndpoints = loadYamlFile(path.join(__dirname, '../docs/image-endpoints.yaml'));
+const userEndpoints = loadYamlFile(path.join(__dirname, '../docs/user-endpoints.yaml'));
+const analyticsEndpoints = loadYamlFile(path.join(__dirname, '../docs/analytics-endpoints.yaml'));
 
-// Create the complete OpenAPI specification
+// Merge all documentation into a single Swagger spec
 const swaggerSpec = {
-  // Use auth-endpoints as the base (it has the main OpenAPI structure)
   ...authEndpoints,
-  
-  // Add schemas from schemas.yaml
   components: {
     ...authEndpoints.components,
     schemas: {
-      ...schemas,  // Add all schemas from schemas.yaml
-      ...authEndpoints.components?.schemas,  // Add any additional schemas from auth-endpoints
-      ...exampleEndpoints.components?.schemas  // Add any additional schemas from example-endpoints
+      ...schemas,
+      ...authEndpoints.components?.schemas,
+      ...exampleEndpoints.components?.schemas,
+      ...orderEndpoints.components?.schemas,
+      ...productEndpoints.components?.schemas,
+      ...imageEndpoints.components?.schemas,
+      ...userEndpoints.components?.schemas,
+      ...analyticsEndpoints.components?.schemas
     }
   },
-  
-  // Merge paths from both endpoint files
   paths: {
     ...authEndpoints.paths,
-    ...exampleEndpoints.paths
+    ...exampleEndpoints.paths,
+    ...orderEndpoints.paths,
+    ...productEndpoints.paths,
+    ...imageEndpoints.paths,
+    ...userEndpoints.paths,
+    ...analyticsEndpoints.paths
   },
-  
-  // Merge tags from both files
   tags: [
     ...(authEndpoints.tags || []),
-    ...(exampleEndpoints.tags || [])
+    ...(exampleEndpoints.tags || []),
+    ...(orderEndpoints.tags || []),
+    ...(productEndpoints.tags || []),
+    ...(imageEndpoints.tags || []),
+    ...(userEndpoints.tags || []),
+    ...(analyticsEndpoints.tags || [])
   ]
 };
 

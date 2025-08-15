@@ -1,0 +1,324 @@
+openapi: 3.0.0
+info:
+  title: E-Commerce Image Upload API
+  description: APIs for uploading product and review images
+  version: 1.0.0
+  contact:
+    name: E-Commerce Backend Team
+    email: support@ecommerce.com
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.ecommerce.com
+    description: Production server
+
+tags:
+  - name: Image Management
+    description: APIs for uploading and managing product and review images
+
+paths:
+  /api/images/product/{productId}:
+    post:
+      tags:
+        - Image Management
+      summary: Upload Product Image
+      description: |
+        Upload an image for a specific product. The image will be stored in the product-specific folder
+        and a record will be created in the product_image table. Supports setting the image as primary.
+        Requires authentication (user or admin).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to upload image for
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file to upload
+                isPrimary:
+                  type: string
+                  enum: ['true', 'false']
+                  description: Whether this image should be the primary image
+                  example: "false"
+              required:
+                - image
+      responses:
+        '201':
+          description: Product image uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductImageUploadResponse'
+              example:
+                success: true
+                message: "Product image uploaded successfully"
+                data:
+                  image:
+                    _id: "507f1f77bcf86cd799439013"
+                    product_id: "507f1f77bcf86cd799439011"
+                    image_url: "/static/images/product/507f1f77bcf86cd799439011/1734567890123_iphone15pro_1234.jpg"
+                    is_primary: false
+                    created_at: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Image file is required"
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/images/review/{reviewId}:
+    post:
+      tags:
+        - Image Management
+      summary: Upload Review Image
+      description: |
+        Upload an image for a specific product review. The image will be stored in the review-specific folder
+        and a record will be created in the review_images table. Requires authentication (user or admin).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          description: Review ID to upload image for
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439015"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file to upload
+              required:
+                - image
+      responses:
+        '201':
+          description: Review image uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewImageUploadResponse'
+              example:
+                success: true
+                message: "Review image uploaded successfully"
+                data:
+                  image:
+                    _id: "507f1f77bcf86cd799439018"
+                    review_id: "507f1f77bcf86cd799439015"
+                    image_url: "/static/images/review/507f1f77bcf86cd799439015/1734567890123_review_5678.jpg"
+                    created_at: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Image file is required"
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication (user or admin)
+
+  schemas:
+    # Product Image Upload Response
+    ProductImageUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Product image uploaded successfully"
+        data:
+          type: object
+          properties:
+            image:
+              $ref: '#/components/schemas/ProductImage'
+          required:
+            - image
+      required:
+        - success
+        - message
+        - data
+
+    # Review Image Upload Response
+    ReviewImageUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Review image uploaded successfully"
+        data:
+          type: object
+          properties:
+            image:
+              $ref: '#/components/schemas/ReviewImage'
+          required:
+            - image
+      required:
+        - success
+        - message
+        - data
+
+    # Product Image Schema
+    ProductImage:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique product image identifier
+          example: "507f1f77bcf86cd799439013"
+        product_id:
+          type: string
+          description: Product ID this image belongs to
+          example: "507f1f77bcf86cd799439011"
+        image_url:
+          type: string
+          description: Image URL or file path
+          maxLength: 500
+          example: "/static/images/product/507f1f77bcf86cd799439011/1734567890123_iphone15pro_1234.jpg"
+        alt_text:
+          type: string
+          description: Alternative text for image
+          maxLength: 200
+          example: "iPhone 15 Pro front view"
+        is_primary:
+          type: boolean
+          description: Whether this is the primary product image
+          example: false
+        sort_order:
+          type: number
+          description: Image display order
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          description: Image creation timestamp
+          example: "2024-01-15T10:30:00.000Z"
+        edited_at:
+          type: string
+          format: date-time
+          description: Image last update timestamp
+          example: "2024-01-15T10:30:00.000Z"
+      required:
+        - _id
+        - product_id
+        - image_url
+        - is_primary
+
+    # Review Image Schema
+    ReviewImage:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique review image identifier
+          example: "507f1f77bcf86cd799439018"
+        review_id:
+          type: string
+          description: Review ID this image belongs to
+          example: "507f1f77bcf86cd799439015"
+        image_url:
+          type: string
+          description: Image URL or file path
+          maxLength: 500
+          example: "/static/images/review/507f1f77bcf86cd799439015/1734567890123_review_5678.jpg"
+        created_at:
+          type: string
+          format: date-time
+          description: Image creation timestamp
+          example: "2024-01-15T10:30:00.000Z"
+      required:
+        - _id
+        - review_id
+        - image_url
+
+    # Error Response
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: "An error occurred"
+      required:
+        - success
+        - message 
