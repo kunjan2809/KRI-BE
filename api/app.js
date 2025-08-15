@@ -3,6 +3,10 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const rateLimiter = require("./middlewares/rateLimiter");
 const cors = require("cors");
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger');
+const authRoutes = require("./routes/authRoutes");
+const exampleRoutes = require("./routes/exampleRoutes");
 // const productRoutes = require("./routes/productRoutes");
 // const userRoutes = require("./routes/userRoutes");
 
@@ -15,7 +19,15 @@ app.use(morgan("dev")); // Logging
 app.use(helmet()); // Security headers
 app.use(rateLimiter); // Rate limiter
 
-// Routes (uncomment and implement as needed)
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'E-Commerce Authentication API Documentation'
+}));
+
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/example", exampleRoutes);
 // app.use("/api/products", productRoutes);
 // app.use("/api/users", userRoutes);
 

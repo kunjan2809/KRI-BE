@@ -1,0 +1,224 @@
+# Shared Schemas for E-Commerce Authentication API
+# This file contains all schemas that can be referenced by other YAML files
+
+# User Schema
+User:
+  type: object
+  properties:
+    _id:
+      type: string
+      description: Unique user identifier
+      example: "507f1f77bcf86cd799439011"
+    first_name:
+      type: string
+      description: User's first name
+      minLength: 1
+      maxLength: 50
+      example: "John"
+    last_name:
+      type: string
+      description: User's last name
+      minLength: 1
+      maxLength: 50
+      example: "Doe"
+    email:
+      type: string
+      format: email
+      description: User's email address (unique)
+      example: "john.doe@example.com"
+    mobile_number:
+      type: string
+      description: User's mobile number (unique, optional)
+      maxLength: 15
+      example: "+1234567890"
+    is_admin:
+      type: boolean
+      description: Whether user has admin privileges
+      default: false
+      example: false
+    full_name:
+      type: string
+      description: Virtual field combining first and last name
+      example: "John Doe"
+    created_at:
+      type: string
+      format: date-time
+      description: User creation timestamp
+      example: "2024-01-15T10:30:00.000Z"
+    edited_at:
+      type: string
+      format: date-time
+      description: User last update timestamp
+      example: "2024-01-15T10:30:00.000Z"
+  required:
+    - _id
+    - first_name
+    - last_name
+    - email
+    - is_admin
+
+# User Registration Request
+UserRegistrationRequest:
+  type: object
+  properties:
+    first_name:
+      type: string
+      description: User's first name
+      minLength: 1
+      maxLength: 50
+      example: "John"
+    last_name:
+      type: string
+      description: User's last name
+      minLength: 1
+      maxLength: 50
+      example: "Doe"
+    email:
+      type: string
+      format: email
+      description: User's email address (must be unique)
+      example: "john.doe@example.com"
+    mobile_number:
+      type: string
+      description: User's mobile number (optional, must be unique if provided)
+      maxLength: 15
+      example: "+1234567890"
+    password:
+      type: string
+      description: User's password (minimum 6 characters)
+      minLength: 6
+      example: "password123"
+  required:
+    - first_name
+    - last_name
+    - email
+    - password
+
+# User Login Request
+UserLoginRequest:
+  type: object
+  properties:
+    email:
+      type: string
+      format: email
+      description: User's email address
+      example: "john.doe@example.com"
+    password:
+      type: string
+      description: User's password
+      example: "password123"
+  required:
+    - email
+    - password
+
+# Forget Password Request
+ForgetPasswordRequest:
+  type: object
+  properties:
+    email:
+      type: string
+      format: email
+      description: User's email address for password reset
+      example: "john.doe@example.com"
+  required:
+    - email
+
+# Reset Password Request
+ResetPasswordRequest:
+  type: object
+  properties:
+    token:
+      type: string
+      description: Reset token received via email
+      example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+    new_password:
+      type: string
+      description: New password (minimum 6 characters)
+      minLength: 6
+      example: "newpassword123"
+  required:
+    - token
+    - new_password
+
+# Success Response
+SuccessResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: Operation success status
+      example: true
+    message:
+      type: string
+      description: Success message
+      example: "Operation completed successfully"
+    data:
+      type: object
+      description: Response data (varies by endpoint)
+  required:
+    - success
+    - message
+
+# Error Response
+ErrorResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: Operation success status
+      example: false
+    message:
+      type: string
+      description: Error message
+      example: "An error occurred"
+  required:
+    - success
+    - message
+
+# Authentication Success Response
+AuthSuccessResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: Operation success status
+      example: true
+    message:
+      type: string
+      description: Success message
+      example: "User registered successfully"
+    data:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: JWT authentication token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJpYXQiOjE1NDQ5NzE4MDAsImV4cCI6MTU0NTU3NjYwMH0.example"
+      required:
+        - user
+        - token
+  required:
+    - success
+    - message
+    - data
+
+# Profile Response
+ProfileResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: Operation success status
+      example: true
+    data:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - user
+  required:
+    - success
+    - data 
