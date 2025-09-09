@@ -7,7 +7,6 @@ const path = require("path");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const authRoutes = require("./routes/authRoutes");
-const exampleRoutes = require("./routes/exampleRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const productRoutes = require("./routes/productRoutes");
 const imageRoutes = require("./routes/imageRoutes");
@@ -24,7 +23,9 @@ app.use(helmet()); // Security headers
 app.use(rateLimiter); // Rate limiter
 
 // Static file serving for images
-app.use('/static', express.static(path.join(__dirname, '../static')));
+const staticPath = path.join(__dirname, '../static');
+console.log('Static files path:', staticPath);
+app.use('/static', express.static(staticPath));
 
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
@@ -34,7 +35,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/example", exampleRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/images", imageRoutes);
