@@ -23,7 +23,9 @@ app.use(helmet()); // Security headers
 app.use(rateLimiter); // Rate limiter
 
 // Static file serving for images
-app.use('/static', express.static(path.join(__dirname, '../static')));
+const staticPath = path.join(__dirname, '../static');
+console.log('Static files path:', staticPath);
+app.use('/static', express.static(staticPath));
 
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
