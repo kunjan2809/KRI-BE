@@ -31,6 +31,11 @@ User:
       description: User's mobile number (optional, must be unique if provided)
       maxLength: 15
       example: "+1234567890"
+    profile_icon:
+      type: string
+      description: User's profile icon number (1-12, stored as string)
+      pattern: '^([1-9]|1[0-2])$'
+      example: "5"
     is_admin:
       type: boolean
       description: Whether user has admin privileges
@@ -456,6 +461,11 @@ UserRegistrationRequest:
       description: User's mobile number (optional, must be unique if provided)
       maxLength: 15
       example: "+1234567890"
+    profile_icon:
+      type: string
+      description: User's profile icon number (1-12, stored as string)
+      pattern: '^([1-9]|1[0-2])$'
+      example: "5"
     password:
       type: string
       description: User's password (minimum 6 characters)

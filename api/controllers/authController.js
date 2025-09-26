@@ -127,6 +127,7 @@ const login = async (req, res) => {
           last_name: user.last_name,
           email: user.email,
           mobile_number: user.mobile_number,
+          profile_icon: user.profile_icon,
           is_admin: user.is_admin,
           full_name: user.full_name
         },
