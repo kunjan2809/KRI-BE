@@ -536,47 +536,116 @@ ProductCreationRequest:
       description: Product description
       maxLength: 2000
       example: "Latest iPhone with advanced features"
-    price:
-      type: number
-      description: Product price
-      minimum: 0
-      example: 999.99
-    discount_type:
+    category_id:
       type: string
-      enum: ['price', 'percentage', null]
-      description: Type of discount applied
-      example: null
-    discount_rate:
-      type: number
-      description: Discount rate value
-      minimum: 0
-      example: 0
-    stock_quantity:
-      type: integer
-      description: Available stock quantity
-      minimum: 0
-      example: 50
-    weight:
-      type: number
-      description: Product weight in kg
-      minimum: 0
-      example: 0.187
+      description: Category ID
+      example: "507f1f77bcf86cd799439011"
     status:
       type: string
       enum: ['draft', 'published']
       description: Product status
       example: "draft"
-    category_id:
-      type: string
-      description: Category ID
-      example: "507f1f77bcf86cd799439011"
+    variations:
+      type: array
+      description: Product variations (color/size combinations)
+      items:
+        $ref: '#/components/schemas/ProductVariationRequest'
+      example:
+        - color: "Titanium"
+          size: "256GB"
+          sku: "IPHONE15PRO-TITANIUM-256"
+          price: 999.99
+          stock: 50
+          status: "active"
+        - color: "Blue"
+          size: "256GB"
+          sku: "IPHONE15PRO-BLUE-256"
+          price: 999.99
+          stock: 30
+          status: "active"
+    pricing:
+      type: object
+      description: Product pricing information
+      properties:
+        mrp:
+          type: number
+          description: Maximum Retail Price
+          minimum: 0
+          example: 1199.99
+        price:
+          type: number
+          description: Actual selling price
+          minimum: 0
+          example: 999.99
+        discount_type:
+          type: string
+          enum: ['price', 'percentage', null]
+          description: Type of discount applied
+          example: "percentage"
+        discount_rate:
+          type: number
+          description: Discount rate value
+          minimum: 0
+          example: 16.67
+      example:
+        mrp: 1199.99
+        price: 999.99
+        discount_type: "percentage"
+        discount_rate: 16.67
+    stock_quantity:
+      type: integer
+      description: Total available stock quantity
+      minimum: 0
+      example: 80
+    weight:
+      type: number
+      description: Product weight in kg
+      minimum: 0
+      example: 0.187
   required:
     - name
     - sku
     - description
-    - price
-    - stock_quantity
     - category_id
+
+# Product Variation Request
+ProductVariationRequest:
+  type: object
+  properties:
+    color:
+      type: string
+      description: Variation color
+      maxLength: 50
+      example: "Titanium"
+    size:
+      type: string
+      description: Variation size
+      maxLength: 20
+      example: "256GB"
+    sku:
+      type: string
+      description: Variation SKU (optional)
+      maxLength: 100
+      example: "IPHONE15PRO-TITANIUM-256"
+    price:
+      type: number
+      description: Variation price
+      minimum: 0
+      example: 999.99
+    stock:
+      type: integer
+      description: Variation stock quantity
+      minimum: 0
+      example: 50
+    status:
+      type: string
+      enum: ['active', 'inactive']
+      description: Variation status
+      example: "active"
+  required:
+    - color
+    - size
+    - price
 
 # Product Update Request
 ProductUpdateRequest:

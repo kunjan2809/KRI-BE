@@ -3,6 +3,7 @@ const ProductImage = require('../models/ProductImage');
 const Category = require('../models/Category');
 const ProductReview = require('../models/ProductReview');
 const ReviewImage = require('../models/ReviewImage');
+const ProductVariation = require('../models/ProductVariation');
 
 // 1. Get All Products with Filters (Admin only)
 const getAllProducts = async (req, res) => {
@@ -136,20 +137,19 @@ const addProduct = async (req, res) => {
       name,
       sku,
       description,
-      price,
-      discount_type,
-      discount_rate,
-      stock_quantity,
-      weight,
+      category_id,
       status,
-      category_id
+      variations = [],
+      pricing = {},
+      stock_quantity,
+      weight
     } = req.body;
     
     // Validate required fields
-    if (!name || !sku || !description || !price || !stock_quantity || !category_id) {
+    if (!name || !sku || !description || !category_id) {
       return res.status(400).json({
         success: false,
-        message: 'Name, SKU, description, price, stock quantity, and category are required'
+        message: 'Name, SKU, description, and category are required'
       });
     }
     
@@ -171,21 +171,76 @@ const addProduct = async (req, res) => {
       });
     }
     
+    // Extract pricing information
+    const { mrp, price, discount_type, discount_rate } = pricing;
+    
+    // Validate pricing - either variations or main pricing must be provided
+    if (variations.length === 0 && !price) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either variations or main price must be provided'
+      });
+    }
+    
+    // Validate variations if provided
+    if (variations.length > 0) {
+      for (const variation of variations) {
+        if (!variation.color || !variation.size || !variation.price) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each variation must have color, size, and price'
+          });
+        }
+        
+        // Check for duplicate variation SKUs
+        if (variation.sku) {
+          const existingVariation = await ProductVariation.findOne({ sku: variation.sku });
+          if (existingVariation) {
+            return res.status(400).json({
+              success: false,
+              message: `Variation SKU '${variation.sku}' already exists`
+            });
+          }
+        }
+      }
+    }
+    
     // Create new product
     const product = new Product({
       name,
       sku,
       description,
-      price,
-      discount_type,
-      discount_rate,
-      stock_quantity,
-      weight,
+      price: price || (variations.length > 0 ? Math.min(...variations.map(v => v.price)) : 0),
+      mrp: mrp || null,
+      discount_type: discount_type || null,
+      discount_rate: discount_rate || null,
+      stock_quantity: stock_quantity || 0,
+      weight: weight || null,
       status: status || 'draft',
       category_id
     });
     
     await product.save();
+    
+    // Create variations if provided
+    const createdVariations = [];
+    if (variations.length > 0) {
+      const variationPromises = variations.map(variationData => {
+        const variation = new ProductVariation({
+          product_id: product._id,
+          color: variationData.color,
+          size: variationData.size,
+          price: variationData.price,
+          stock_quantity: variationData.stock || 0,
+          sku: variationData.sku || null,
+          status: variationData.status || 'active'
+        });
+        
+        return variation.save();
+      });
+      
+      createdVariations.push(...await Promise.all(variationPromises));
+    }
     
     // Populate category and get primary image
     const populatedProduct = await Product.findById(product._id)
@@ -200,7 +255,8 @@ const addProduct = async (req, res) => {
         product: {
           ...populatedProduct.toObject(),
           primary_image: primaryImage || null
-        }
+        },
+        variations: createdVariations.length > 0 ? createdVariations : undefined
       }
     });
     

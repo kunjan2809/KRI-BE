@@ -186,13 +186,28 @@ paths:
               name: "iPhone 15 Pro"
               sku: "IPHONE15PRO-256GB"
               description: "Latest iPhone with advanced features and titanium design"
-              price: 999.99
-              discount_type: null
-              discount_rate: 0
-              stock_quantity: 100
-              weight: 0.187
-              status: "draft"
               category_id: "507f1f77bcf86cd799439012"
+              status: "draft"
+              variations:
+                - color: "Titanium"
+                  size: "256GB"
+                  sku: "IPHONE15PRO-TITANIUM-256"
+                  price: 999.99
+                  stock: 50
+                  status: "active"
+                - color: "Blue"
+                  size: "256GB"
+                  sku: "IPHONE15PRO-BLUE-256"
+                  price: 999.99
+                  stock: 30
+                  status: "active"
+              pricing:
+                mrp: 1199.99
+                price: 999.99
+                discount_type: "percentage"
+                discount_rate: 16.67
+              stock_quantity: 80
+              weight: 0.187
       responses:
         '201':
           description: Product created successfully
@@ -210,9 +225,10 @@ paths:
                     sku: "IPHONE15PRO-256GB"
                     description: "Latest iPhone with advanced features and titanium design"
                     price: 999.99
-                    discount_type: null
-                    discount_rate: 0
-                    stock_quantity: 100
+                    mrp: 1199.99
+                    discount_type: "percentage"
+                    discount_rate: 16.67
+                    stock_quantity: 80
                     weight: 0.187
                     status: "draft"
                     category_id:
@@ -220,13 +236,36 @@ paths:
                       name: "Electronics"
                     deleted_at: null
                     final_price: 999.99
-                    discount_amount: 0
+                    discount_amount: 200.00
                     in_stock: true
                     low_stock: false
                     is_deleted: false
                     created_at: "2024-01-15T10:30:00.000Z"
                     edited_at: "2024-01-15T10:30:00.000Z"
                     primary_image: null
+                  variations:
+                    - _id: "507f1f77bcf86cd799439013"
+                      product_id: "507f1f77bcf86cd799439011"
+                      color: "Titanium"
+                      size: "256GB"
+                      price: 999.99
+                      stock_quantity: 50
+                      sku: "IPHONE15PRO-TITANIUM-256"
+                      status: "active"
+                      variation_name: "Titanium - 256GB"
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      updated_at: "2024-01-15T10:30:00.000Z"
+                    - _id: "507f1f77bcf86cd799439014"
+                      product_id: "507f1f77bcf86cd799439011"
+                      color: "Blue"
+                      size: "256GB"
+                      price: 999.99
+                      stock_quantity: 30
+                      sku: "IPHONE15PRO-BLUE-256"
+                      status: "active"
+                      variation_name: "Blue - 256GB"
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      updated_at: "2024-01-15T10:30:00.000Z"
         '400':
           description: Bad request - validation error
           content:
