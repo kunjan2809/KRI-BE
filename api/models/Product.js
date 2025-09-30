@@ -55,11 +55,6 @@ const productSchema = new mongoose.Schema({
     min: [0, 'Stock quantity cannot be negative'],
     default: 0
   },
-  color: {
-    type: String,
-    trim: true,
-    maxlength: [50, 'Color cannot exceed 50 characters']
-  },
   weight: {
     type: Number,
     min: [0, 'Weight cannot be negative'],
@@ -68,8 +63,8 @@ const productSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: {
-      values: ['draft', 'published', 'hidden', 'deleted'],
-      message: 'Status must be either "draft", "published", "hidden", or "deleted"'
+      values: ['draft', 'published', 'deleted'],
+      message: 'Status must be either "draft", "published", or "deleted"'
     },
     default: 'draft'
   },

@@ -11,6 +11,7 @@ const authenticateToken = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ 
         success: false, 
+        code: "UNAUTHORIZED",
         message: 'Access token is required' 
       });
     }
@@ -24,6 +25,7 @@ const authenticateToken = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ 
         success: false, 
+        code: "UNAUTHORIZED",
         message: 'Invalid token - user not found' 
       });
     }
@@ -35,17 +37,20 @@ const authenticateToken = async (req, res, next) => {
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ 
         success: false, 
+        code: "UNAUTHORIZED",
         message: 'Invalid token' 
       });
     }
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ 
         success: false, 
+        code: "UNAUTHORIZED",
         message: 'Token expired' 
       });
     }
     return res.status(500).json({ 
       success: false, 
+      code: "INTERNAL_SERVER_ERROR",
       message: 'Token verification failed' 
     });
   }
@@ -57,6 +62,7 @@ const requireRole = (role) => {
     if (!req.user) {
       return res.status(401).json({ 
         success: false, 
+        code: "ADMIN_ACCESS_REQUIRED",
         message: 'Authentication required' 
       });
     }
@@ -65,6 +71,7 @@ const requireRole = (role) => {
     if (role === 'admin' && !req.user.is_admin) {
       return res.status(403).json({ 
         success: false, 
+        code: "ADMIN_ACCESS_REQUIRED",
         message: 'Admin access required' 
       });
     }
@@ -81,6 +88,7 @@ const requireRole = (role) => {
 
     return res.status(403).json({ 
       success: false, 
+      code: "ADMIN_ACCESS_REQUIRED",
       message: 'Insufficient permissions' 
     });
   };

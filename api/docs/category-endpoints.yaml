@@ -1,0 +1,367 @@
+openapi: 3.0.0
+info:
+  title: E-Commerce Category Management API
+  version: 1.0.0
+  description: Category management endpoints for creating, reading, updating, and deleting product categories
+  contact:
+    name: API Support
+    email: support@ecommerce.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+  - url: https://api.ecommerce.com
+    description: Production server
+
+paths:
+  /api/category/all:
+    get:
+      tags:
+        - Categories
+      summary: Get All Categories
+      description: |
+        Public API endpoint to retrieve all product categories with their details.
+        No authentication required.
+      operationId: getAllCategories
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      categories:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Category'
+                      total_categories:
+                        type: integer
+                        description: Total number of categories
+                        example: 5
+              example:
+                success: true
+                data:
+                  categories:
+                    - _id: "507f1f77bcf86cd799439012"
+                      name: "Electronics"
+                      description: "Electronic devices and gadgets"
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      product_count: 25
+                    - _id: "507f1f77bcf86cd799439013"
+                      name: "Clothing"
+                      description: "Fashion and apparel"
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      product_count: 15
+                  total_categories: 2
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Error fetching categories"
+                error: "Database connection error"
+
+  /api/category/add:
+    post:
+      tags:
+        - Categories
+      summary: Add New Category
+      description: |
+        Admin-only API endpoint to create a new product category.
+        Requires admin authentication.
+      operationId: addCategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Category name
+                  maxLength: 100
+                  example: "Electronics"
+                description:
+                  type: string
+                  description: Category description
+                  maxLength: 500
+                  example: "Electronic devices and gadgets"
+              required:
+                - name
+            example:
+              name: "Electronics"
+              description: "Electronic devices and gadgets"
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Category created successfully"
+                  data:
+                    type: object
+                    properties:
+                      category:
+                        $ref: '#/components/schemas/Category'
+              example:
+                success: true
+                message: "Category created successfully"
+                data:
+                  category:
+                    _id: "507f1f77bcf86cd799439012"
+                    name: "Electronics"
+                    description: "Electronic devices and gadgets"
+                    created_at: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Bad request - validation error or duplicate category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Category with this name already exists"
+        '401':
+          description: Unauthorized - admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/category/edit/{categoryId}:
+    put:
+      tags:
+        - Categories
+      summary: Edit Category
+      description: |
+        Admin-only API endpoint to update an existing product category.
+        Requires admin authentication.
+      operationId: editCategory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          description: Category ID to update
+          schema:
+            type: string
+            format: objectid
+          example: "507f1f77bcf86cd799439012"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Updated category name
+                  maxLength: 100
+                  example: "Electronics & Gadgets"
+                description:
+                  type: string
+                  description: Updated category description
+                  maxLength: 500
+                  example: "Electronic devices, gadgets and accessories"
+            example:
+              name: "Electronics & Gadgets"
+              description: "Electronic devices, gadgets and accessories"
+      responses:
+        '200':
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Category updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      category:
+                        $ref: '#/components/schemas/Category'
+              example:
+                success: true
+                message: "Category updated successfully"
+                data:
+                  category:
+                    _id: "507f1f77bcf86cd799439012"
+                    name: "Electronics & Gadgets"
+                    description: "Electronic devices, gadgets and accessories"
+                    created_at: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Bad request - validation error or duplicate category name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Category not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/category/delete/{categoryId}:
+    delete:
+      tags:
+        - Categories
+      summary: Delete Category
+      description: |
+        Admin-only API endpoint to delete a product category.
+        This will also soft-delete all products in this category.
+        Requires admin authentication.
+      operationId: deleteCategory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          description: Category ID to delete
+          schema:
+            type: string
+            format: objectid
+          example: "507f1f77bcf86cd799439012"
+      responses:
+        '200':
+          description: Category deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Category deleted successfully. 5 products were also deleted."
+                  data:
+                    type: object
+                    properties:
+                      deleted_category:
+                        type: string
+                        example: "Electronics"
+                      deleted_products_count:
+                        type: integer
+                        example: 5
+              example:
+                success: true
+                message: "Category deleted successfully. 5 products were also deleted."
+                data:
+                  deleted_category: "Electronics"
+                  deleted_products_count: 5
+        '401':
+          description: Unauthorized - admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Category not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for admin authentication
+
+  schemas:
+    Category:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: Category unique identifier
+          example: "507f1f77bcf86cd799439012"
+        name:
+          type: string
+          description: Category name
+          maxLength: 100
+          example: "Electronics"
+        description:
+          type: string
+          description: Category description
+          maxLength: 500
+          example: "Electronic devices and gadgets"
+        created_at:
+          type: string
+          format: date-time
+          description: Category creation timestamp
+          example: "2024-01-15T10:30:00.000Z"
+        product_count:
+          type: integer
+          description: Number of products in this category (virtual field)
+          example: 25
+      required:
+        - _id
+        - name
+        - created_at

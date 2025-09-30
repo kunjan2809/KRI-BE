@@ -267,10 +267,29 @@ const getProfile = async (req, res) => {
   }
 };
 
+// Get Current User Data (/me endpoint)
+const getMe = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        user: req.user
+      }
+    });
+  } catch (error) {
+    console.error('Get me error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user data'
+    });
+  }
+};
+
 module.exports = {
   signup,
   login,
   forgetPassword,
   resetPassword,
-  getProfile
+  getProfile,
+  getMe
 }; 
