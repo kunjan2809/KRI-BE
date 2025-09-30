@@ -379,7 +379,7 @@ const getOrderDetails = async (req, res) => {
     const orderItems = await OrderItem.find({ order_id: orderId })
       .populate({
         path: 'product_id',
-        select: 'name sku description price discount_type discount_rate stock_quantity color weight status category_id'
+        select: 'name sku description price discount_type discount_rate stock_quantity weight status category_id'
       });
 
     // Get delivery information if exists

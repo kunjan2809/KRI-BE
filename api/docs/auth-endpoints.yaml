@@ -50,10 +50,12 @@ paths:
               example1:
                 summary: Basic user registration
                 value:
-                  first_name: "John"
-                  last_name: "Doe"
-                  email: "john.doe@example.com"
-                  password: "password123"
+                  first_name: "Alice"
+                  last_name: "Johnson"
+                  email: "alice.johnson@example.com"
+                  mobile_number: "+1987654321"
+                  password: "mypassword123"
+                  profile_icon: "5"
               example2:
                 summary: User registration with mobile number
                 value:
@@ -364,4 +366,70 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 success: false
-                message: "Error fetching user profile" 
+                message: "Error fetching user profile"
+
+  /api/auth/me:
+    get:
+      summary: Get current user data
+      description: Retrieve the complete user information of the currently authenticated user using JWT token from header
+      tags: [User Management]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+              example:
+                success: true
+                data:
+                  user:
+                    _id: "507f1f77bcf86cd799439011"
+                    first_name: "John"
+                    last_name: "Doe"
+                    email: "john.doe@example.com"
+                    mobile_number: "+1234567890"
+                    profile_icon: "5"
+                    status: "active"
+                    is_admin: false
+                    full_name: "John Doe"
+                    created_at: "2024-01-15T10:30:00.000Z"
+                    edited_at: "2024-01-15T10:30:00.000Z"
+        '401':
+          description: Unauthorized - missing or invalid JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingToken:
+                  summary: Missing authorization token
+                  value:
+                    success: false
+                    message: "Access token is required"
+                invalidToken:
+                  summary: Invalid token
+                  value:
+                    success: false
+                    message: "Invalid token"
+                expiredToken:
+                  summary: Expired token
+                  value:
+                    success: false
+                    message: "Token expired"
+                userNotFound:
+                  summary: User not found
+                  value:
+                    success: false
+                    message: "Invalid token - user not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Error fetching user data" 

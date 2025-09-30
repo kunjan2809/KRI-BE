@@ -177,6 +177,72 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/images/product/{imageId}:
+    delete:
+      tags:
+        - Image Management
+      summary: Delete Product Image
+      description: |
+        Delete a specific product image by its ID. This will remove both the physical file
+        from the filesystem and the database record. Requires authentication (user or admin).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: imageId
+          in: path
+          description: Product image ID to delete
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439013"
+      responses:
+        '200':
+          description: Product image deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductImageDeleteResponse'
+              example:
+                success: true
+                message: "Product image deleted successfully"
+                data:
+                  deleted_image:
+                    _id: "507f1f77bcf86cd799439013"
+                    product_id: "507f1f77bcf86cd799439011"
+                    image_url: "/static/images/product/507f1f77bcf86cd799439011/1734567890123_iphone15pro_1234.jpg"
+                    is_primary: false
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Image ID is required"
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Product image not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -229,6 +295,30 @@ components:
               $ref: '#/components/schemas/ReviewImage'
           required:
             - image
+      required:
+        - success
+        - message
+        - data
+
+    # Product Image Delete Response
+    ProductImageDeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Product image deleted successfully"
+        data:
+          type: object
+          properties:
+            deleted_image:
+              $ref: '#/components/schemas/ProductImage'
+          required:
+            - deleted_image
       required:
         - success
         - message

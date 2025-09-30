@@ -118,7 +118,6 @@ paths:
                       discount_type: null
                       discount_rate: 0
                       stock_quantity: 75
-                      color: "Titanium"
                       weight: 0.187
                       status: "published"
                       category_id:
@@ -191,7 +190,6 @@ paths:
               discount_type: null
               discount_rate: 0
               stock_quantity: 100
-              color: "Titanium"
               weight: 0.187
               status: "draft"
               category_id: "507f1f77bcf86cd799439012"
@@ -215,7 +213,6 @@ paths:
                     discount_type: null
                     discount_rate: 0
                     stock_quantity: 100
-                    color: "Titanium"
                     weight: 0.187
                     status: "draft"
                     category_id:
@@ -304,7 +301,6 @@ paths:
                     discount_type: null
                     discount_rate: 0
                     stock_quantity: 150
-                    color: "Titanium"
                     weight: 0.187
                     status: "published"
                     category_id:
@@ -445,7 +441,6 @@ paths:
                       discount_type: null
                       discount_rate: 0
                       stock_quantity: 75
-                      color: "Titanium"
                       weight: 0.187
                       status: "published"
                       category_id:
@@ -598,7 +593,7 @@ paths:
       summary: Change Product Status
       description: |
         Update the status of a specific product.
-        Valid statuses: draft, published, hidden.
+        Valid statuses: draft, published.
         Returns the product ID and new status.
       security:
         - bearerAuth: []
@@ -640,7 +635,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 success: false
-                message: "Valid status is required (draft, published, or hidden)"
+                message: "Valid status is required (draft or published)"
         '401':
           description: Unauthorized - Admin authentication required
           content:

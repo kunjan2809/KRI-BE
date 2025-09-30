@@ -140,7 +140,6 @@ const addProduct = async (req, res) => {
       discount_type,
       discount_rate,
       stock_quantity,
-      color,
       weight,
       status,
       category_id
@@ -181,7 +180,6 @@ const addProduct = async (req, res) => {
       discount_type,
       discount_rate,
       stock_quantity,
-      color,
       weight,
       status: status || 'draft',
       category_id
@@ -449,10 +447,10 @@ const updateProductStatus = async (req, res) => {
     const { productId } = req.params;
     const { status } = req.body;
     
-    if (!status || !['draft', 'published', 'hidden'].includes(status)) {
+    if (!status || !['draft', 'published'].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Valid status is required (draft, published, or hidden)'
+        message: 'Valid status is required (draft or published)'
       });
     }
     

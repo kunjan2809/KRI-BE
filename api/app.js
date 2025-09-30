@@ -12,6 +12,7 @@ const productRoutes = require("./routes/productRoutes");
 const imageRoutes = require("./routes/imageRoutes");
 const userRoutes = require("./routes/userRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const categoryRoutes = require("./routes/categoryRoutes");
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/images", imageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/category", categoryRoutes);
 
 // Global error handler (optional)
 app.use((err, req, res, next) => {

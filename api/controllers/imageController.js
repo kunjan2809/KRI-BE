@@ -233,6 +233,62 @@ const uploadReviewImage = async (req, res) => {
     }
 };
 
+// 3. Delete Product Image
+const deleteProductImage = async (req, res) => {
+    try {
+        const { imageId } = req.params;
+
+        // Validate imageId
+        if (!imageId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Image ID is required'
+            });
+        }
+
+        // Find the product image
+        const productImage = await ProductImage.findById(imageId);
+        if (!productImage) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product image not found'
+            });
+        }
+
+        // Get the full file path
+        const fullPath = path.join(__dirname, '../..', productImage.image_url);
+
+        // Delete the file from filesystem if it exists
+        if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+        }
+
+        // Delete the database record
+        await ProductImage.findByIdAndDelete(imageId);
+
+        res.json({
+            success: true,
+            message: 'Product image deleted successfully',
+            data: {
+                deleted_image: {
+                    _id: productImage._id,
+                    product_id: productImage.product_id,
+                    image_url: productImage.image_url,
+                    is_primary: productImage.is_primary
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error deleting product image:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting product image',
+            error: error.message
+        });
+    }
+};
+
 // Middleware to set upload type and entity ID for multer
 const setUploadContext = (uploadType) => {
     return (req, res, next) => {
@@ -245,6 +301,7 @@ const setUploadContext = (uploadType) => {
 module.exports = {
     uploadProductImage,
     uploadReviewImage,
+    deleteProductImage,
     setUploadContext,
     upload
 }; 
