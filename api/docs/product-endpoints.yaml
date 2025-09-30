@@ -115,6 +115,7 @@ paths:
                       sku: "IPHONE15PRO-256GB"
                       description: "Latest iPhone with advanced features"
                       price: 999.99
+                      mrp: 1099.99
                       discount_type: null
                       discount_rate: 0
                       stock_quantity: 75
@@ -140,6 +141,49 @@ paths:
                         sort_order: 1
                         created_at: "2024-01-15T10:30:00.000Z"
                         edited_at: "2024-01-15T10:30:00.000Z"
+                      all_images:
+                        - _id: "507f1f77bcf86cd799439013"
+                          product_id: "507f1f77bcf86cd799439011"
+                          image_url: "/images/products/iphone15pro-1.jpg"
+                          alt_text: "iPhone 15 Pro front view"
+                          is_primary: true
+                          sort_order: 1
+                          created_at: "2024-01-15T10:30:00.000Z"
+                          edited_at: "2024-01-15T10:30:00.000Z"
+                        - _id: "507f1f77bcf86cd799439014"
+                          product_id: "507f1f77bcf86cd799439011"
+                          image_url: "/images/products/iphone15pro-2.jpg"
+                          alt_text: "iPhone 15 Pro back view"
+                          is_primary: false
+                          sort_order: 2
+                          created_at: "2024-01-15T10:30:00.000Z"
+                          edited_at: "2024-01-15T10:30:00.000Z"
+                      variations:
+                        - _id: "507f1f77bcf86cd799439015"
+                          product_id: "507f1f77bcf86cd799439011"
+                          color: "Space Black"
+                          size: "256GB"
+                          price: 999.99
+                          stock_quantity: 25
+                          sku: "IPHONE15PRO-256GB-BLK"
+                          status: "active"
+                          variation_name: "Space Black 256GB"
+                          created_at: "2024-01-15T10:30:00.000Z"
+                          updated_at: "2024-01-15T10:30:00.000Z"
+                        - _id: "507f1f77bcf86cd799439016"
+                          product_id: "507f1f77bcf86cd799439011"
+                          color: "Natural Titanium"
+                          size: "256GB"
+                          price: 999.99
+                          stock_quantity: 30
+                          sku: "IPHONE15PRO-256GB-TIT"
+                          status: "active"
+                          variation_name: "Natural Titanium 256GB"
+                          created_at: "2024-01-15T10:30:00.000Z"
+                          updated_at: "2024-01-15T10:30:00.000Z"
+                      review_overview:
+                        average_rating: 4.5
+                        total_reviews: 25
                   pagination:
                     current_page: 1
                     total_pages: 5
@@ -471,28 +515,28 @@ paths:
                 success: true
                 data:
                   product:
-                    product:
-                      _id: "507f1f77bcf86cd799439011"
-                      name: "iPhone 15 Pro"
-                      sku: "IPHONE15PRO-256GB"
-                      description: "Latest iPhone with advanced features and titanium design"
-                      price: 999.99
-                      discount_type: null
-                      discount_rate: 0
-                      stock_quantity: 75
-                      weight: 0.187
-                      status: "published"
-                      category_id:
-                        _id: "507f1f77bcf86cd799439012"
-                        name: "Electronics"
-                      deleted_at: null
-                      final_price: 999.99
-                      discount_amount: 0
-                      in_stock: true
-                      low_stock: false
-                      is_deleted: false
-                      created_at: "2024-01-15T10:30:00.000Z"
-                      edited_at: "2024-01-15T10:30:00.000Z"
+                    _id: "507f1f77bcf86cd799439011"
+                    name: "iPhone 15 Pro"
+                    sku: "IPHONE15PRO-256GB"
+                    description: "Latest iPhone with advanced features and titanium design"
+                    price: 999.99
+                    mrp: 1099.99
+                    discount_type: null
+                    discount_rate: 0
+                    stock_quantity: 75
+                    weight: 0.187
+                    status: "published"
+                    category_id:
+                      _id: "507f1f77bcf86cd799439012"
+                      name: "Electronics"
+                    deleted_at: null
+                    final_price: 999.99
+                    discount_amount: 0
+                    in_stock: true
+                    low_stock: false
+                    is_deleted: false
+                    created_at: "2024-01-15T10:30:00.000Z"
+                    edited_at: "2024-01-15T10:30:00.000Z"
                     images:
                       - _id: "507f1f77bcf86cd799439013"
                         product_id: "507f1f77bcf86cd799439011"
@@ -510,10 +554,33 @@ paths:
                         sort_order: 2
                         created_at: "2024-01-15T10:30:00.000Z"
                         edited_at: "2024-01-15T10:30:00.000Z"
+                    variations:
+                      - _id: "507f1f77bcf86cd799439015"
+                        product_id: "507f1f77bcf86cd799439011"
+                        color: "Space Black"
+                        size: "256GB"
+                        price: 999.99
+                        stock_quantity: 25
+                        sku: "IPHONE15PRO-256GB-BLK"
+                        status: "active"
+                        variation_name: "Space Black 256GB"
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        updated_at: "2024-01-15T10:30:00.000Z"
+                      - _id: "507f1f77bcf86cd799439016"
+                        product_id: "507f1f77bcf86cd799439011"
+                        color: "Natural Titanium"
+                        size: "256GB"
+                        price: 999.99
+                        stock_quantity: 30
+                        sku: "IPHONE15PRO-256GB-TIT"
+                        status: "active"
+                        variation_name: "Natural Titanium 256GB"
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        updated_at: "2024-01-15T10:30:00.000Z"
                   reviews:
                     summary:
-                      averageRating: 4.5
-                      totalReviews: 12
+                      average_rating: 4.5
+                      total_reviews: 12
                     details:
                       - _id: "507f1f77bcf86cd799439015"
                         product_id: "507f1f77bcf86cd799439011"

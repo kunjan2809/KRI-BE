@@ -84,13 +84,32 @@ const getAllProducts = async (req, res) => {
       .limit(parseInt(limit))
       .skip(skip);
     
-    // Get primary images for all products
-    const productsWithImages = await Promise.all(
+    // Get comprehensive data for all products
+    const productsWithFullData = await Promise.all(
       products.map(async (product) => {
-        const primaryImage = await ProductImage.getPrimaryImage(product._id);
+        // Get all images for the product
+        const [primaryImage, allImages, variations, reviewOverview] = await Promise.all([
+          ProductImage.getPrimaryImage(product._id),
+          ProductImage.getProductImages(product._id),
+          ProductVariation.getProductVariations(product._id),
+          ProductReview.getProductAverageRating(product._id)
+        ]);
+        
+        // Calculate review overview
+        const reviewData = reviewOverview.length > 0 ? reviewOverview[0] : { 
+          averageRating: 0, 
+          totalReviews: 0 
+        };
+        
         return {
           ...product.toObject(),
-          primary_image: primaryImage || null
+          primary_image: primaryImage || null,
+          all_images: allImages || [],
+          variations: variations || [],
+          review_overview: {
+            average_rating: reviewData.averageRating || 0,
+            total_reviews: reviewData.totalReviews || 0
+          }
         };
       })
     );
@@ -101,7 +120,7 @@ const getAllProducts = async (req, res) => {
     res.json({
       success: true,
       data: {
-        products: productsWithImages,
+        products: productsWithFullData,
         pagination: {
           current_page: parseInt(page),
           total_pages: Math.ceil(totalProducts / limit),
@@ -403,11 +422,10 @@ const getProductDetails = async (req, res) => {
       });
     }
     
-    // Get all product images
-    const productImages = await ProductImage.getProductImages(productId);
-    
-    // Get review summary and details
-    const [reviewSummary, reviewDetails] = await Promise.all([
+    // Get comprehensive product data
+    const [productImages, variations, reviewSummary, reviewDetails] = await Promise.all([
+      ProductImage.getProductImages(productId),
+      ProductVariation.getProductVariations(productId),
       ProductReview.getProductAverageRating(productId),
       ProductReview.getProductReviews(productId, 50, 0) // Get up to 50 reviews
     ]);
@@ -422,10 +440,10 @@ const getProductDetails = async (req, res) => {
       images: reviewImages.filter(img => img.review_id.toString() === review._id.toString())
     }));
     
-    // Prepare review summary
-    const reviewData = {
-      summary: reviewSummary.length > 0 ? reviewSummary[0] : { averageRating: 0, totalReviews: 0 },
-      details: reviewsWithImages
+    // Prepare comprehensive review data
+    const reviewData = reviewSummary.length > 0 ? reviewSummary[0] : { 
+      averageRating: 0, 
+      totalReviews: 0 
     };
     
     res.json({
@@ -433,9 +451,16 @@ const getProductDetails = async (req, res) => {
       data: {
         product: {
           ...product.toObject(),
-          images: productImages
+          images: productImages,
+          variations: variations || []
         },
-        reviews: reviewData
+        reviews: {
+          summary: {
+            average_rating: reviewData.averageRating || 0,
+            total_reviews: reviewData.totalReviews || 0
+          },
+          details: reviewsWithImages
+        }
       }
     });
     

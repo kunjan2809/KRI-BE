@@ -243,6 +243,57 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/images/product/{imageId}:
+    delete:
+      tags:
+        - Image Management
+      summary: Delete Product Image
+      description: |
+        Delete a specific product image by its ID. This will remove both the file
+        from the filesystem and the database record. Requires authentication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: imageId
+          in: path
+          description: Product image ID to delete
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439013"
+      responses:
+        '200':
+          description: Product image deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductImageDeleteResponse'
+              example:
+                success: true
+                message: "Product image deleted successfully"
+                data:
+                  deleted_image_id: "507f1f77bcf86cd799439013"
+                  product_id: "507f1f77bcf86cd799439011"
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -396,6 +447,37 @@ components:
         - _id
         - review_id
         - image_url
+
+    # Product Image Delete Response Schema
+    ProductImageDeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Product image deleted successfully"
+        data:
+          type: object
+          properties:
+            deleted_image_id:
+              type: string
+              description: ID of the deleted image
+              example: "507f1f77bcf86cd799439013"
+            product_id:
+              type: string
+              description: ID of the product the image belonged to
+              example: "507f1f77bcf86cd799439011"
+          required:
+            - deleted_image_id
+            - product_id
+      required:
+        - success
+        - message
+        - data
 
     # Error Response
     ErrorResponse:
