@@ -41,6 +41,17 @@ User:
       description: Whether user has admin privileges
       default: false
       example: false
+    status:
+      type: string
+      enum: ['active', 'banned']
+      description: User account status
+      default: 'active'
+      example: 'active'
+    password:
+      type: string
+      description: User's password (minimum 6 characters)
+      minLength: 6
+      example: "password123"
     reset_token:
       type: string
       nullable: true
@@ -206,50 +217,115 @@ Product:
     - stock_quantity
     - category_id
 
+# Product Variation Schema
+ProductVariation:
+  type: object
+  properties:
+    _id:
+      type: string
+      description: Unique variation identifier
+      example: "507f1f77bcf86cd799439015"
+    product_id:
+      type: string
+      description: Reference to parent product
+      example: "507f1f77bcf86cd799439011"
+    color:
+      type: string
+      description: Variation color
+      maxLength: 50
+      example: "Space Black"
+    size:
+      type: string
+      description: Variation size
+      maxLength: 20
+      example: "256GB"
+    price:
+      type: number
+      description: Variation price
+      minimum: 0
+      example: 999.99
+    stock_quantity:
+      type: integer
+      description: Available stock for this variation
+      minimum: 0
+      example: 25
+    sku:
+      type: string
+      description: Unique SKU for this variation
+      maxLength: 100
+      example: "IPHONE15PRO-256GB-BLK"
+    status:
+      type: string
+      enum: ['active', 'inactive']
+      description: Variation status
+      example: "active"
+    variation_name:
+      type: string
+      description: Virtual field combining color and size
+      example: "Space Black - 256GB"
+    created_at:
+      type: string
+      format: date-time
+      description: Creation timestamp
+      example: "2024-01-15T10:30:00.000Z"
+    updated_at:
+      type: string
+      format: date-time
+      description: Last update timestamp
+      example: "2024-01-15T10:30:00.000Z"
+  required:
+    - _id
+    - product_id
+    - color
+    - size
+    - price
+    - stock_quantity
+    - status
+
 # Product Image Schema
 ProductImage:
   type: object
   properties:
     _id:
       type: string
-      description: Unique product image identifier
-      example: "507f1f77bcf86cd799439011"
+      description: Unique image identifier
+      example: "507f1f77bcf86cd799439013"
     product_id:
       type: string
-      description: Product ID this image belongs to
+      description: Reference to product
       example: "507f1f77bcf86cd799439011"
     image_url:
       type: string
-      description: Image URL or file path
-      maxLength: 500
+      description: Path to the image file
       example: "/images/products/iphone15pro-1.jpg"
     alt_text:
       type: string
-      description: Alternative text for image
-      maxLength: 200
+      description: Alternative text for accessibility
       example: "iPhone 15 Pro front view"
     is_primary:
       type: boolean
-      description: Whether this is the primary product image
+      description: Whether this is the primary image
       example: true
     sort_order:
       type: integer
-      description: Image display order
+      description: Display order
       example: 1
     created_at:
       type: string
       format: date-time
-      description: Image creation timestamp
+      description: Creation timestamp
       example: "2024-01-15T10:30:00.000Z"
     edited_at:
       type: string
       format: date-time
-      description: Image last update timestamp
+      description: Last update timestamp
       example: "2024-01-15T10:30:00.000Z"
   required:
     - _id
     - product_id
     - image_url
+    - is_primary
+    - sort_order
 
 # Product Review Schema
 ProductReview:
@@ -258,38 +334,39 @@ ProductReview:
     _id:
       type: string
       description: Unique review identifier
-      example: "507f1f77bcf86cd799439011"
+      example: "507f1f77bcf86cd799439015"
     product_id:
       type: string
-      description: Product ID this review belongs to
+      description: Reference to product
       example: "507f1f77bcf86cd799439011"
     user_id:
       $ref: '#/components/schemas/User'
     rating:
       type: number
-      description: Rating value (0 to 5 in 0.5 increments)
+      description: Rating from 0 to 5 in 0.5 increments
       minimum: 0
       maximum: 5
       example: 4.5
     rating_description:
       type: string
-      description: Review text
+      description: Review comment
       maxLength: 1000
-      example: "Great product, excellent quality and fast delivery!"
+      example: "Excellent product! The quality is outstanding and delivery was super fast."
     order_id:
       type: string
-      description: Order ID (optional, can be null)
-      example: "507f1f77bcf86cd799439011"
+      description: Reference to order (optional)
+      nullable: true
+      example: "507f1f77bcf86cd799439017"
     created_at:
       type: string
       format: date-time
-      description: Review creation timestamp
-      example: "2024-01-15T10:30:00.000Z"
+      description: Creation timestamp
+      example: "2024-01-14T15:30:00.000Z"
     edited_at:
       type: string
       format: date-time
-      description: Review last update timestamp
-      example: "2024-01-15T10:30:00.000Z"
+      description: Last update timestamp
+      example: "2024-01-14T15:30:00.000Z"
   required:
     - _id
     - product_id
@@ -303,22 +380,21 @@ ReviewImage:
   properties:
     _id:
       type: string
-      description: Unique review image identifier
-      example: "507f1f77bcf86cd799439011"
+      description: Unique image identifier
+      example: "507f1f77bcf86cd799439018"
     review_id:
       type: string
-      description: Review ID this image belongs to
-      example: "507f1f77bcf86cd799439011"
+      description: Reference to review
+      example: "507f1f77bcf86cd799439015"
     image_url:
       type: string
-      description: Image URL or file path
-      maxLength: 500
+      description: Path to the image file
       example: "/images/reviews/review-1.jpg"
     created_at:
       type: string
       format: date-time
-      description: Image creation timestamp
-      example: "2024-01-15T10:30:00.000Z"
+      description: Creation timestamp
+      example: "2024-01-14T15:30:00.000Z"
   required:
     - _id
     - review_id
@@ -330,19 +406,19 @@ ShippingAddress:
   properties:
     _id:
       type: string
-      description: Unique shipping address identifier
-      example: "507f1f77bcf86cd799439011"
+      description: Unique address identifier
+      example: "507f1f77bcf86cd799439020"
     user_id:
       type: string
-      description: User ID this address belongs to
-      example: "507f1f77bcf86cd799439011"
+      description: Reference to user
+      example: "507f1f77bcf86cd799439016"
     full_name:
       type: string
-      description: Full name for this address
+      description: Full name for delivery
       example: "John Doe"
     mobile_number:
       type: string
-      description: Mobile number for this address
+      description: Contact mobile number
       example: "+1234567890"
     address_line_1:
       type: string
@@ -350,11 +426,12 @@ ShippingAddress:
       example: "123 Main Street"
     address_line_2:
       type: string
-      description: Secondary address line (optional)
+      description: Secondary address line
       example: "Apt 4B"
     landmark:
       type: string
-      description: Nearby landmark (optional)
+      description: Nearby landmark
+      maxLength: 100
       example: "Near Central Park"
     city:
       type: string
@@ -362,11 +439,11 @@ ShippingAddress:
       example: "New York"
     state:
       type: string
-      description: State or province
+      description: State name
       example: "NY"
     postal_code:
       type: string
-      description: Postal or ZIP code
+      description: Postal/ZIP code
       example: "10001"
     country:
       type: string
@@ -375,21 +452,21 @@ ShippingAddress:
     is_default:
       type: boolean
       description: Whether this is the default address
-      example: false
+      example: true
     formatted_address:
       type: string
-      description: Complete formatted address string
+      description: Virtual field - complete formatted address string
       example: "123 Main Street, Apt 4B, Near Central Park, New York, NY 10001, United States"
     created_at:
       type: string
       format: date-time
-      description: Address creation timestamp
-      example: "2024-01-15T10:30:00.000Z"
+      description: Creation timestamp
+      example: "2024-01-10T08:00:00.000Z"
     edited_at:
       type: string
       format: date-time
-      description: Address last update timestamp
-      example: "2024-01-15T10:30:00.000Z"
+      description: Last update timestamp
+      example: "2024-01-10T08:00:00.000Z"
   required:
     - _id
     - user_id
@@ -408,35 +485,40 @@ Delivery:
     _id:
       type: string
       description: Unique delivery identifier
-      example: "507f1f77bcf86cd799439011"
+      example: "507f1f77bcf86cd799439021"
     order_id:
       type: string
-      description: Order ID this delivery belongs to
-      example: "507f1f77bcf86cd799439011"
+      description: Reference to order
+      example: "507f1f77bcf86cd799439017"
     delivery_by:
       type: string
       description: Shipping company name
+      maxLength: 100
       example: "FedEx"
     speed:
       type: string
       enum: ['standard', 'normal', 'express', 'overnight', 'same_day', 'economy']
       description: Delivery speed option
+      default: 'standard'
       example: "express"
     tracking_number:
       type: string
-      description: Parcel tracking number
-      example: "1Z999AA10123456784"
+      description: Delivery tracking number
+      maxLength: 100
+      example: "TRK123456789"
     shipping_address_id:
-      $ref: '#/components/schemas/ShippingAddress'
+      type: string
+      description: Reference to shipping address
+      example: "507f1f77bcf86cd799439020"
     created_at:
       type: string
       format: date-time
-      description: Delivery creation timestamp
+      description: Creation timestamp
       example: "2024-01-15T10:30:00.000Z"
     edited_at:
       type: string
       format: date-time
-      description: Delivery last update timestamp
+      description: Last update timestamp
       example: "2024-01-15T10:30:00.000Z"
   required:
     - _id
@@ -445,6 +527,124 @@ Delivery:
     - speed
     - tracking_number
     - shipping_address_id
+
+# Payment Schema
+Payment:
+  type: object
+  properties:
+    _id:
+      type: string
+      description: Unique payment identifier
+      example: "507f1f77bcf86cd799439022"
+    order_id:
+      type: string
+      description: Reference to order
+      example: "507f1f77bcf86cd799439017"
+    amount:
+      type: number
+      description: Payment amount
+      minimum: 0
+      example: 999.99
+    method:
+      type: string
+      enum: ['card', 'upi', 'netbanking', 'wallet', 'cod', 'bank_transfer']
+      description: Payment method used
+      example: "card"
+    payment_reference_id:
+      type: string
+      description: Payment reference ID
+      maxLength: 200
+      example: "PAY123456789"
+    status:
+      type: string
+      enum: ['success', 'failed', 'pending']
+      description: Payment status
+      default: 'pending'
+      example: "success"
+    paid_at:
+      type: string
+      format: date-time
+      nullable: true
+      description: Payment completion timestamp
+      example: "2024-01-15T10:30:00.000Z"
+    status_display:
+      type: string
+      description: Virtual field - human-readable payment status
+      example: "Successful"
+    method_display:
+      type: string
+      description: Virtual field - human-readable payment method
+      example: "Credit/Debit Card"
+  required:
+    - _id
+    - order_id
+    - amount
+    - method
+    - payment_reference_id
+    - status
+
+# Return Request Schema
+ReturnRequest:
+  type: object
+  properties:
+    _id:
+      type: string
+      description: Unique return request identifier
+      example: "507f1f77bcf86cd799439023"
+    user_id:
+      type: string
+      description: Reference to user
+      example: "507f1f77bcf86cd799439016"
+    order_id:
+      type: string
+      description: Reference to order
+      example: "507f1f77bcf86cd799439017"
+    order_item_id:
+      type: string
+      description: Reference to order item
+      example: "507f1f77bcf86cd799439024"
+    reason:
+      type: string
+      description: Return reason
+      maxLength: 1000
+      example: "Product arrived damaged"
+    notes:
+      type: string
+      enum: ['Damaged', 'Wrong item', 'Size issue', 'Quality issue', 'Not as described', 'Received late', 'Changed mind', 'Other']
+      description: Predefined return reason
+      example: "Damaged"
+    status:
+      type: string
+      enum: ['requested', 'approved', 'rejected', 'picked-up', 'cancelled']
+      description: Return request status
+      default: 'requested'
+      example: "requested"
+    resolved_at:
+      type: string
+      format: date-time
+      nullable: true
+      description: Resolution timestamp
+      example: null
+    status_display:
+      type: string
+      description: Virtual field - human-readable return status
+      example: "Requested"
+    notes_display:
+      type: string
+      description: Virtual field - display notes or custom reason
+      example: "Custom reason provided"
+    created_at:
+      type: string
+      format: date-time
+      description: Creation timestamp
+      example: "2024-01-16T10:30:00.000Z"
+  required:
+    - _id
+    - user_id
+    - order_id
+    - order_item_id
+    - reason
+    - status
 
 # User Registration Request
 UserRegistrationRequest:
@@ -1397,6 +1597,18 @@ OrderItem:
       type: number
       description: Final price for this item
       example: 1999.98
+    total_value:
+      type: number
+      description: Virtual field - total value of this item
+      example: 1999.98
+    item_discount:
+      type: number
+      description: Virtual field - discount amount for this item
+      example: 0
+    discount_percentage:
+      type: number
+      description: Virtual field - discount percentage for this item
+      example: 0
   required:
     - _id
     - order_id
@@ -1404,420 +1616,4 @@ OrderItem:
     - product_name_snapshot
     - product_price_snapshot
     - quantity
-    - price
-
-# ========================================
-# MISSING MODEL SCHEMAS
-# ========================================
-
-# Product Variation Schema
-ProductVariation:
-  type: object
-  properties:
-    _id:
-      type: string
-      description: Unique variation identifier
-      example: "507f1f77bcf86cd799439015"
-    product_id:
-      type: string
-      description: Reference to parent product
-      example: "507f1f77bcf86cd799439011"
-    color:
-      type: string
-      description: Variation color
-      maxLength: 50
-      example: "Space Black"
-    size:
-      type: string
-      description: Variation size
-      maxLength: 20
-      example: "256GB"
-    price:
-      type: number
-      description: Variation price
-      minimum: 0
-      example: 999.99
-    stock_quantity:
-      type: integer
-      description: Available stock for this variation
-      minimum: 0
-      example: 25
-    sku:
-      type: string
-      description: Unique SKU for this variation
-      maxLength: 100
-      example: "IPHONE15PRO-256GB-BLK"
-    status:
-      type: string
-      enum: ['active', 'inactive']
-      description: Variation status
-      example: "active"
-    variation_name:
-      type: string
-      description: Virtual field combining color and size
-      example: "Space Black - 256GB"
-    created_at:
-      type: string
-      format: date-time
-      description: Creation timestamp
-      example: "2024-01-15T10:30:00.000Z"
-    updated_at:
-      type: string
-      format: date-time
-      description: Last update timestamp
-      example: "2024-01-15T10:30:00.000Z"
-  required:
-    - _id
-    - product_id
-    - color
-    - size
-    - price
-    - stock_quantity
-    - status
-
-# Product Image Schema
-ProductImage:
-  type: object
-  properties:
-    _id:
-      type: string
-      description: Unique image identifier
-      example: "507f1f77bcf86cd799439013"
-    product_id:
-      type: string
-      description: Reference to product
-      example: "507f1f77bcf86cd799439011"
-    image_url:
-      type: string
-      description: Path to the image file
-      example: "/images/products/iphone15pro-1.jpg"
-    alt_text:
-      type: string
-      description: Alternative text for accessibility
-      example: "iPhone 15 Pro front view"
-    is_primary:
-      type: boolean
-      description: Whether this is the primary image
-      example: true
-    sort_order:
-      type: integer
-      description: Display order
-      example: 1
-    created_at:
-      type: string
-      format: date-time
-      description: Creation timestamp
-      example: "2024-01-15T10:30:00.000Z"
-    edited_at:
-      type: string
-      format: date-time
-      description: Last update timestamp
-      example: "2024-01-15T10:30:00.000Z"
-  required:
-    - _id
-    - product_id
-    - image_url
-    - is_primary
-    - sort_order
-
-# Review Image Schema
-ReviewImage:
-  type: object
-  properties:
-    _id:
-      type: string
-      description: Unique image identifier
-      example: "507f1f77bcf86cd799439018"
-    review_id:
-      type: string
-      description: Reference to review
-      example: "507f1f77bcf86cd799439015"
-    image_url:
-      type: string
-      description: Path to the image file
-      example: "/images/reviews/review-1.jpg"
-    created_at:
-      type: string
-      format: date-time
-      description: Creation timestamp
-      example: "2024-01-14T15:30:00.000Z"
-  required:
-    - _id
-    - review_id
-    - image_url
-
-# Product Review Schema
-ProductReview:
-  type: object
-  properties:
-    _id:
-      type: string
-      description: Unique review identifier
-      example: "507f1f77bcf86cd799439015"
-    product_id:
-      type: string
-      description: Reference to product
-      example: "507f1f77bcf86cd799439011"
-    user_id:
-      $ref: '#/components/schemas/User'
-    rating:
-      type: integer
-      minimum: 1
-      maximum: 5
-      description: Rating from 1 to 5
-      example: 5
-    rating_description:
-      type: string
-      description: Review comment
-      example: "Excellent product! The quality is outstanding and delivery was super fast."
-    order_id:
-      type: string
-      description: Reference to order
-      example: "507f1f77bcf86cd799439017"
-    created_at:
-      type: string
-      format: date-time
-      description: Creation timestamp
-      example: "2024-01-14T15:30:00.000Z"
-    edited_at:
-      type: string
-      format: date-time
-      description: Last update timestamp
-      example: "2024-01-14T15:30:00.000Z"
-  required:
-    - _id
-    - product_id
-    - user_id
-    - rating
-    - rating_description
-    - order_id
-
-# Shipping Address Schema
-ShippingAddress:
-  type: object
-  properties:
-    _id:
-      type: string
-      description: Unique address identifier
-      example: "507f1f77bcf86cd799439020"
-    user_id:
-      type: string
-      description: Reference to user
-      example: "507f1f77bcf86cd799439016"
-    full_name:
-      type: string
-      description: Full name for delivery
-      example: "John Doe"
-    mobile_number:
-      type: string
-      description: Contact mobile number
-      example: "+1234567890"
-    address_line_1:
-      type: string
-      description: Primary address line
-      example: "123 Main Street"
-    address_line_2:
-      type: string
-      description: Secondary address line
-      example: "Apt 4B"
-    city:
-      type: string
-      description: City name
-      example: "New York"
-    state:
-      type: string
-      description: State name
-      example: "NY"
-    postal_code:
-      type: string
-      description: Postal/ZIP code
-      example: "10001"
-    country:
-      type: string
-      description: Country name
-      example: "United States"
-    is_default:
-      type: boolean
-      description: Whether this is the default address
-      example: true
-    created_at:
-      type: string
-      format: date-time
-      description: Creation timestamp
-      example: "2024-01-10T08:00:00.000Z"
-    edited_at:
-      type: string
-      format: date-time
-      description: Last update timestamp
-      example: "2024-01-10T08:00:00.000Z"
-  required:
-    - _id
-    - user_id
-    - full_name
-    - mobile_number
-    - address_line_1
-    - city
-    - state
-    - postal_code
-    - country
-
-# Delivery Schema
-Delivery:
-  type: object
-  properties:
-    _id:
-      type: string
-      description: Unique delivery identifier
-      example: "507f1f77bcf86cd799439021"
-    order_id:
-      type: string
-      description: Reference to order
-      example: "507f1f77bcf86cd799439017"
-    tracking_number:
-      type: string
-      description: Delivery tracking number
-      example: "TRK123456789"
-    carrier:
-      type: string
-      description: Delivery carrier company
-      example: "FedEx"
-    estimated_delivery:
-      type: string
-      format: date-time
-      description: Estimated delivery date
-      example: "2024-01-20T18:00:00.000Z"
-    actual_delivery:
-      type: string
-      format: date-time
-      nullable: true
-      description: Actual delivery date
-      example: null
-    status:
-      type: string
-      enum: ['pending', 'in_transit', 'delivered', 'failed']
-      description: Delivery status
-      example: "in_transit"
-    notes:
-      type: string
-      description: Delivery notes
-      example: "Left at front door"
-    created_at:
-      type: string
-      format: date-time
-      description: Creation timestamp
-      example: "2024-01-15T10:30:00.000Z"
-    updated_at:
-      type: string
-      format: date-time
-      description: Last update timestamp
-      example: "2024-01-15T10:30:00.000Z"
-  required:
-    - _id
-    - order_id
-    - tracking_number
-    - carrier
-    - status
-
-# Payment Schema
-Payment:
-  type: object
-  properties:
-    _id:
-      type: string
-      description: Unique payment identifier
-      example: "507f1f77bcf86cd799439022"
-    order_id:
-      type: string
-      description: Reference to order
-      example: "507f1f77bcf86cd799439017"
-    amount:
-      type: number
-      description: Payment amount
-      minimum: 0
-      example: 999.99
-    payment_method:
-      type: string
-      enum: ['credit_card', 'debit_card', 'paypal', 'cod', 'bank_transfer']
-      description: Payment method used
-      example: "credit_card"
-    payment_status:
-      type: string
-      enum: ['pending', 'completed', 'failed', 'refunded']
-      description: Payment status
-      example: "completed"
-    transaction_id:
-      type: string
-      description: External transaction ID
-      example: "TXN123456789"
-    payment_gateway:
-      type: string
-      description: Payment gateway used
-      example: "stripe"
-    created_at:
-      type: string
-      format: date-time
-      description: Creation timestamp
-      example: "2024-01-15T10:30:00.000Z"
-    updated_at:
-      type: string
-      format: date-time
-      description: Last update timestamp
-      example: "2024-01-15T10:30:00.000Z"
-  required:
-    - _id
-    - order_id
-    - amount
-    - payment_method
-    - payment_status
-
-# Return Request Schema
-ReturnRequest:
-  type: object
-  properties:
-    _id:
-      type: string
-      description: Unique return request identifier
-      example: "507f1f77bcf86cd799439023"
-    order_id:
-      type: string
-      description: Reference to order
-      example: "507f1f77bcf86cd799439017"
-    user_id:
-      type: string
-      description: Reference to user
-      example: "507f1f77bcf86cd799439016"
-    reason:
-      type: string
-      enum: ['defective', 'wrong_item', 'not_as_described', 'changed_mind', 'other']
-      description: Return reason
-      example: "defective"
-    description:
-      type: string
-      description: Detailed return description
-      example: "Product arrived damaged"
-    status:
-      type: string
-      enum: ['pending', 'approved', 'rejected', 'completed']
-      description: Return request status
-      example: "pending"
-    refund_amount:
-      type: number
-      description: Refund amount
-      minimum: 0
-      example: 999.99
-    created_at:
-      type: string
-      format: date-time
-      description: Creation timestamp
-      example: "2024-01-16T10:30:00.000Z"
-    updated_at:
-      type: string
-      format: date-time
-      description: Last update timestamp
-      example: "2024-01-16T10:30:00.000Z"
-  required:
-    - _id
-    - order_id
-    - user_id
-    - reason
-    - status 
+    - price 
