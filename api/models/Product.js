@@ -27,6 +27,11 @@ const productSchema = new mongoose.Schema({
     min: [0, 'Price cannot be negative'],
     set: v => Math.round(v * 100) / 100 // Round to 2 decimal places
   },
+  mrp: {
+    type: Number,
+    min: [0, 'MRP cannot be negative'],
+    set: v => Math.round(v * 100) / 100 // Round to 2 decimal places
+  },
   discount_type: {
     type: String,
     enum: {
