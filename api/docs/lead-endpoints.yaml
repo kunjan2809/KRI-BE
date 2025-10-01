@@ -1,0 +1,80 @@
+openapi: 3.0.0
+info:
+  title: Lead Management API
+  description: API endpoints for managing email subscriptions and leads
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Development server
+
+paths:
+  # Subscribe Email to Leads (Public API)
+  /api/leads/subscribe:
+    post:
+      tags:
+        - Leads
+      summary: Subscribe email to leads
+      description: |
+        Subscribe an email address to the leads list for future email campaigns.
+        This is a public API that does not require authentication.
+        If the email already exists, returns a conflict error.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadSubscriptionRequest'
+            example:
+              email: "user@example.com"
+      responses:
+        '201':
+          description: Email subscribed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadSubscriptionResponse'
+              example:
+                success: true
+                message: "Email subscribed successfully"
+                data:
+                  email: "user@example.com"
+                  subscribed_at: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Bad request - Missing or invalid email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Email is required"
+        '409':
+          description: Conflict - Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Email already exists"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Error subscribing email"
+                error: "Database connection failed"
+
+components:
+  schemas:
+    Lead:
+      $ref: '#/components/schemas/Lead'
+    LeadSubscriptionRequest:
+      $ref: '#/components/schemas/LeadSubscriptionRequest'
+    LeadSubscriptionResponse:
+      $ref: '#/components/schemas/LeadSubscriptionResponse'
+    ErrorResponse:
+      $ref: '#/components/schemas/ErrorResponse'

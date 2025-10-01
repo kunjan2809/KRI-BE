@@ -761,6 +761,175 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # Get Featured Products (Public API)
+  /api/products/featured:
+    get:
+      tags:
+        - Products
+      summary: Get featured products
+      description: |
+        Returns up to 12 featured products. If there are fewer than 12 featured products,
+        the remaining slots are filled with random published products.
+        This is a public API that does not require authentication.
+      responses:
+        '200':
+          description: Featured products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      products:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ProductWithPrimaryImage'
+                        maxItems: 12
+                      total_count:
+                        type: integer
+                        description: Total number of products returned
+                        example: 12
+                      featured_count:
+                        type: integer
+                        description: Number of featured products
+                        example: 8
+                      random_count:
+                        type: integer
+                        description: Number of random products
+                        example: 4
+              example:
+                success: true
+                data:
+                  products:
+                    - _id: "507f1f77bcf86cd799439011"
+                      name: "iPhone 15 Pro"
+                      sku: "IPHONE15PRO-256GB"
+                      description: "Latest iPhone with advanced features"
+                      price: 999.99
+                      mrp: 1099.99
+                      featured: true
+                      status: "published"
+                      category_id:
+                        _id: "507f1f77bcf86cd799439012"
+                        name: "Electronics"
+                      primary_image: "https://example.com/images/iphone15pro.jpg"
+                      all_images: ["https://example.com/images/iphone15pro.jpg"]
+                      variations: []
+                      review_overview:
+                        average_rating: 4.5
+                        total_reviews: 128
+                  total_count: 12
+                  featured_count: 8
+                  random_count: 4
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Toggle Featured Status (Admin only)
+  /api/products/admin/featured/{productId}:
+    put:
+      tags:
+        - Products
+      summary: Toggle featured status
+      description: Add or remove a product from featured products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - featured
+              properties:
+                featured:
+                  type: boolean
+                  description: Whether to feature this product
+                  example: true
+            example:
+              featured: true
+      responses:
+        '200':
+          description: Featured status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Product added to featured products successfully"
+                  data:
+                    type: object
+                    properties:
+                      product:
+                        $ref: '#/components/schemas/ProductWithPrimaryImage'
+                      featured_status:
+                        type: boolean
+                        example: true
+              example:
+                success: true
+                message: "Product added to featured products successfully"
+                data:
+                  product:
+                    _id: "507f1f77bcf86cd799439011"
+                    name: "iPhone 15 Pro"
+                    sku: "IPHONE15PRO-256GB"
+                    description: "Latest iPhone with advanced features"
+                    price: 999.99
+                    mrp: 1099.99
+                    featured: true
+                    status: "published"
+                    category_id:
+                      _id: "507f1f77bcf86cd799439012"
+                      name: "Electronics"
+                    primary_image: "https://example.com/images/iphone15pro.jpg"
+                  featured_status: true
+        '400':
+          description: Bad request - Invalid featured value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
