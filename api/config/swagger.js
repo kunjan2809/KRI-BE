@@ -22,6 +22,7 @@ const imageEndpoints = loadYamlFile(path.join(__dirname, '../docs/image-endpoint
 const userEndpoints = loadYamlFile(path.join(__dirname, '../docs/user-endpoints.yaml'));
 const analyticsEndpoints = loadYamlFile(path.join(__dirname, '../docs/analytics-endpoints.yaml'));
 const categoryEndpoints = loadYamlFile(path.join(__dirname, '../docs/category-endpoints.yaml'));
+const leadEndpoints = loadYamlFile(path.join(__dirname, '../docs/lead-endpoints.yaml'));
 
 // Merge all documentation into a single Swagger spec
 const swaggerSpec = {
@@ -36,7 +37,8 @@ const swaggerSpec = {
              ...imageEndpoints.components?.schemas,
              ...userEndpoints.components?.schemas,
              ...analyticsEndpoints.components?.schemas,
-             ...categoryEndpoints.components?.schemas
+             ...categoryEndpoints.components?.schemas,
+             ...leadEndpoints.components?.schemas
            }
          },
            paths: {
@@ -46,7 +48,8 @@ const swaggerSpec = {
            ...imageEndpoints.paths,
            ...userEndpoints.paths,
            ...analyticsEndpoints.paths,
-           ...categoryEndpoints.paths
+           ...categoryEndpoints.paths,
+           ...leadEndpoints.paths
          },
            tags: [
            ...(authEndpoints.tags || []),
@@ -55,7 +58,8 @@ const swaggerSpec = {
            ...(imageEndpoints.tags || []),
            ...(userEndpoints.tags || []),
            ...(analyticsEndpoints.tags || []),
-           ...(categoryEndpoints.tags || [])
+           ...(categoryEndpoints.tags || []),
+           ...(leadEndpoints.tags || [])
          ]
 };
 

@@ -570,6 +570,158 @@ const updateProductStatus = async (req, res) => {
   }
 };
 
+// 8. Get Featured Products (Public API)
+const getFeaturedProducts = async (req, res) => {
+  try {
+    const limit = 12; // Always return 12 products
+    
+    // First, try to get featured products
+    let products = await Product.find({
+      featured: true,
+      deleted_at: null,
+      status: 'published'
+    })
+    .populate('category_id', 'name')
+    .sort({ created_at: -1 })
+    .limit(limit);
+    
+    // If we don't have enough featured products, fill with random published products
+    if (products.length < limit) {
+      const remainingCount = limit - products.length;
+      const featuredProductIds = products.map(p => p._id);
+      
+      // Get random published products excluding already selected featured ones
+      const randomProducts = await Product.aggregate([
+        {
+          $match: {
+            _id: { $nin: featuredProductIds },
+            deleted_at: null,
+            status: 'published'
+          }
+        },
+        { $sample: { size: remainingCount } }
+      ]);
+      
+      // Populate category for random products
+      const populatedRandomProducts = await Product.populate(randomProducts, {
+        path: 'category_id',
+        select: 'name'
+      });
+      
+      // Combine featured and random products
+      products = [...products, ...populatedRandomProducts];
+    }
+    
+    // Get comprehensive data for all products
+    const productsWithFullData = await Promise.all(
+      products.map(async (product) => {
+        // Get all images for the product
+        const [primaryImage, allImages, variations, reviewOverview] = await Promise.all([
+          ProductImage.getPrimaryImage(product._id),
+          ProductImage.getProductImages(product._id),
+          ProductVariation.getProductVariations(product._id),
+          ProductReview.getProductAverageRating(product._id)
+        ]);
+        
+        // Calculate review overview
+        const reviewData = reviewOverview.length > 0 ? reviewOverview[0] : { 
+          averageRating: 0, 
+          totalReviews: 0 
+        };
+        
+        return {
+          ...product.toObject(),
+          primary_image: primaryImage || null,
+          all_images: allImages || [],
+          variations: variations || [],
+          review_overview: {
+            average_rating: reviewData.averageRating || 0,
+            total_reviews: reviewData.totalReviews || 0
+          }
+        };
+      })
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        products: productsWithFullData,
+        total_count: productsWithFullData.length,
+        featured_count: productsWithFullData.filter(p => p.featured).length,
+        random_count: productsWithFullData.filter(p => !p.featured).length
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching featured products:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching featured products',
+      error: error.message
+    });
+  }
+};
+
+// 9. Toggle Featured Status (Admin only)
+const toggleFeaturedStatus = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { featured } = req.body;
+    
+    // Validate featured field
+    if (typeof featured !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Featured field must be a boolean value'
+      });
+    }
+    
+    // Find product and ensure it's not soft-deleted
+    const product = await Product.findOne({ 
+      _id: productId, 
+      deleted_at: null, 
+      status: { $ne: 'deleted' } 
+    });
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    // Update featured status
+    product.featured = featured;
+    await product.save();
+    
+    // Populate category and get primary image
+    const updatedProduct = await Product.findById(productId)
+      .populate('category_id', 'name');
+    
+    const primaryImage = await ProductImage.getPrimaryImage(productId);
+    
+    res.json({
+      success: true,
+      message: `Product ${featured ? 'added to' : 'removed from'} featured products successfully`,
+      data: {
+        product: {
+          ...updatedProduct.toObject(),
+          primary_image: primaryImage || null
+        },
+        featured_status: featured
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error toggling featured status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error toggling featured status',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   addProduct,
@@ -577,5 +729,7 @@ module.exports = {
   softDeleteProduct,
   getProductDetails,
   updateProductQuantity,
-  updateProductStatus
+  updateProductStatus,
+  getFeaturedProducts,
+  toggleFeaturedStatus
 }; 

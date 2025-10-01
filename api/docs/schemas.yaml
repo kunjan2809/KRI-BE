@@ -1,6 +1,69 @@
 # Shared Schemas for E-Commerce Authentication API
 # This file contains all schemas that can be referenced by other YAML files
 
+# Lead Schema
+Lead:
+  type: object
+  properties:
+    _id:
+      type: string
+      description: Unique lead identifier
+      example: "507f1f77bcf86cd799439011"
+    email:
+      type: string
+      format: email
+      description: Subscribed email address
+      example: "user@example.com"
+    created_at:
+      type: string
+      format: date-time
+      description: Subscription timestamp
+      example: "2024-01-15T10:30:00.000Z"
+    updated_at:
+      type: string
+      format: date-time
+      description: Last update timestamp
+      example: "2024-01-15T10:30:00.000Z"
+  required:
+    - _id
+    - email
+    - created_at
+    - updated_at
+
+# Lead Subscription Request Schema
+LeadSubscriptionRequest:
+  type: object
+  required:
+    - email
+  properties:
+    email:
+      type: string
+      format: email
+      description: Email address to subscribe
+      example: "user@example.com"
+
+# Lead Subscription Response Schema
+LeadSubscriptionResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      example: true
+    message:
+      type: string
+      example: "Email subscribed successfully"
+    data:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        subscribed_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00.000Z"
+
 # User Schema
 User:
   type: object
@@ -178,6 +241,11 @@ Product:
       format: date-time
       description: Soft delete timestamp
       example: null
+    featured:
+      type: boolean
+      description: Whether the product is featured
+      default: false
+      example: true
     final_price:
       type: number
       description: Final price after discount (virtual field)
@@ -1040,6 +1108,11 @@ ProductWithImages:
       nullable: true
       description: Soft delete timestamp
       example: null
+    featured:
+      type: boolean
+      description: Whether the product is featured
+      default: false
+      example: true
     final_price:
       type: number
       description: Final price after discount
@@ -1137,6 +1210,11 @@ ProductWithPrimaryImage:
       format: date-time
       description: Soft delete timestamp
       example: null
+    featured:
+      type: boolean
+      description: Whether the product is featured
+      default: false
+      example: true
     final_price:
       type: number
       description: Final price after discount

@@ -13,6 +13,7 @@ const imageRoutes = require("./routes/imageRoutes");
 const userRoutes = require("./routes/userRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
+const leadRoutes = require("./routes/leadRoutes");
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use("/api/images", imageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/category", categoryRoutes);
+app.use("/api/leads", leadRoutes);
 
 // Global error handler (optional)
 app.use((err, req, res, next) => {

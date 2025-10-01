@@ -3,7 +3,10 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const { auth } = require('../middlewares/auth');
 
-// All product routes require admin authentication
+// Public route for featured products (no authentication required)
+router.get('/featured', productController.getFeaturedProducts);
+
+// All other product routes require admin authentication
 router.use(auth('admin'));
 
 // 1. Get All Products with Filters
@@ -33,5 +36,9 @@ router.patch('/admin/quantity/:productId', productController.updateProductQuanti
 // 7. Update Product Status
 // PATCH /api/products/admin/status/:productId
 router.patch('/admin/status/:productId', productController.updateProductStatus);
+
+// 8. Toggle Featured Status
+// PUT /api/products/admin/featured/:productId
+router.put('/admin/featured/:productId', productController.toggleFeaturedStatus);
 
 module.exports = router; 

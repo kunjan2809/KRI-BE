@@ -81,6 +81,11 @@ const productSchema = new mongoose.Schema({
   deleted_at: {
     type: Date,
     default: null
+  },
+  featured: {
+    type: Boolean,
+    default: false,
+    description: 'Whether the product is featured'
   }
 }, {
   timestamps: {
@@ -95,6 +100,7 @@ productSchema.index({ category_id: 1 });
 productSchema.index({ status: 1 });
 productSchema.index({ price: 1 });
 productSchema.index({ deleted_at: 1 }); // Index for soft delete queries
+productSchema.index({ featured: 1 }); // Index for featured products queries
 productSchema.index({ name: 'text', description: 'text' }); // Text search index
 
 // Virtual for final price after discount
