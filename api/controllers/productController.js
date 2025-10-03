@@ -630,7 +630,7 @@ const getFeaturedProducts = async (req, res) => {
         };
         
         return {
-          ...product.toObject(),
+          ...(product.toObject ? product.toObject() : product),
           primary_image: primaryImage || null,
           all_images: allImages || [],
           variations: variations || [],
