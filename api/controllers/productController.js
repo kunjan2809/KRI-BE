@@ -630,7 +630,7 @@ const getFeaturedProducts = async (req, res) => {
         };
         
         return {
-          ...product.toObject(),
+          ...(product.toObject ? product.toObject() : product),
           primary_image: primaryImage || null,
           all_images: allImages || [],
           variations: variations || [],
@@ -662,7 +662,318 @@ const getFeaturedProducts = async (req, res) => {
   }
 };
 
-// 9. Toggle Featured Status (Admin only)
+// 9. Add Product Variation (Admin only)
+const addProductVariation = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { color, size, price, stock_quantity, sku, status } = req.body;
+    
+    // Validate required fields
+    if (!color || !size || !price) {
+      return res.status(400).json({
+        success: false,
+        message: 'Color, size, and price are required'
+      });
+    }
+    
+    // Validate price
+    if (price < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Price cannot be negative'
+      });
+    }
+    
+    // Validate stock quantity
+    if (stock_quantity !== undefined && stock_quantity < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Stock quantity cannot be negative'
+      });
+    }
+    
+    // Check if product exists and is not deleted
+    const product = await Product.findOne({ 
+      _id: productId, 
+      deleted_at: null, 
+      status: { $ne: 'deleted' } 
+    });
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    // Check if variation with same color and size already exists
+    const existingVariation = await ProductVariation.findOne({
+      product_id: productId,
+      color: color.trim(),
+      size: size.trim()
+    });
+    
+    if (existingVariation) {
+      return res.status(409).json({
+        success: false,
+        message: `Variation with color '${color}' and size '${size}' already exists for this product`
+      });
+    }
+    
+    // Check for duplicate SKU if provided
+    if (sku) {
+      const existingSku = await ProductVariation.findOne({ sku: sku.trim() });
+      if (existingSku) {
+        return res.status(409).json({
+          success: false,
+          message: `SKU '${sku}' already exists`
+        });
+      }
+    }
+    
+    // Create new variation
+    const variation = new ProductVariation({
+      product_id: productId,
+      color: color.trim(),
+      size: size.trim(),
+      price: price,
+      stock_quantity: stock_quantity || 0,
+      sku: sku ? sku.trim() : null,
+      status: status || 'active'
+    });
+    
+    await variation.save();
+    
+    res.status(201).json({
+      success: true,
+      message: 'Product variation added successfully',
+      data: {
+        variation: variation.toObject()
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error adding product variation:', error);
+    
+    // Handle duplicate key error (MongoDB unique constraint)
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Variation with this combination already exists'
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error adding product variation',
+      error: error.message
+    });
+  }
+};
+
+// 10. Edit Product Variation (Admin only)
+const editProductVariation = async (req, res) => {
+  try {
+    const { productId, variationId } = req.params;
+    const updateData = req.body;
+    
+    // Validate that at least one field is provided for update
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one field must be provided for update'
+      });
+    }
+    
+    // Validate price if provided
+    if (updateData.price !== undefined && updateData.price < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Price cannot be negative'
+      });
+    }
+    
+    // Validate stock quantity if provided
+    if (updateData.stock_quantity !== undefined && updateData.stock_quantity < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Stock quantity cannot be negative'
+      });
+    }
+    
+    // Check if product exists and is not deleted
+    const product = await Product.findOne({ 
+      _id: productId, 
+      deleted_at: null, 
+      status: { $ne: 'deleted' } 
+    });
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    // Find the variation
+    const variation = await ProductVariation.findOne({
+      _id: variationId,
+      product_id: productId
+    });
+    
+    if (!variation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product variation not found'
+      });
+    }
+    
+    // Check for duplicate color/size combination if being updated
+    if (updateData.color || updateData.size) {
+      const newColor = updateData.color ? updateData.color.trim() : variation.color;
+      const newSize = updateData.size ? updateData.size.trim() : variation.size;
+      
+      const existingVariation = await ProductVariation.findOne({
+        product_id: productId,
+        color: newColor,
+        size: newSize,
+        _id: { $ne: variationId }
+      });
+      
+      if (existingVariation) {
+        return res.status(409).json({
+          success: false,
+          message: `Variation with color '${newColor}' and size '${newSize}' already exists for this product`
+        });
+      }
+    }
+    
+    // Check for duplicate SKU if being updated
+    if (updateData.sku) {
+      const existingSku = await ProductVariation.findOne({ 
+        sku: updateData.sku.trim(),
+        _id: { $ne: variationId }
+      });
+      if (existingSku) {
+        return res.status(409).json({
+          success: false,
+          message: `SKU '${updateData.sku}' already exists`
+        });
+      }
+    }
+    
+    // Update only provided fields
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] !== undefined) {
+        if (key === 'color' || key === 'size' || key === 'sku') {
+          variation[key] = updateData[key].trim();
+        } else {
+          variation[key] = updateData[key];
+        }
+      }
+    });
+    
+    await variation.save();
+    
+    res.json({
+      success: true,
+      message: 'Product variation updated successfully',
+      data: {
+        variation: variation.toObject()
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error updating product variation:', error);
+    
+    // Handle duplicate key error (MongoDB unique constraint)
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Variation with this combination already exists'
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error updating product variation',
+      error: error.message
+    });
+  }
+};
+
+// 11. Delete Product Variation (Admin only)
+const deleteProductVariation = async (req, res) => {
+  try {
+    const { productId, variationId } = req.params;
+    
+    // Check if product exists and is not deleted
+    const product = await Product.findOne({ 
+      _id: productId, 
+      deleted_at: null, 
+      status: { $ne: 'deleted' } 
+    });
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    // Find and delete the variation
+    const variation = await ProductVariation.findOneAndDelete({
+      _id: variationId,
+      product_id: productId
+    });
+    
+    if (!variation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product variation not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Product variation deleted successfully',
+      data: {
+        deleted_variation: {
+          id: variation._id,
+          color: variation.color,
+          size: variation.size,
+          sku: variation.sku
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error deleting product variation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting product variation',
+      error: error.message
+    });
+  }
+};
+
+// 12. Toggle Featured Status (Admin only)
 const toggleFeaturedStatus = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -731,5 +1042,8 @@ module.exports = {
   updateProductQuantity,
   updateProductStatus,
   getFeaturedProducts,
+  addProductVariation,
+  editProductVariation,
+  deleteProductVariation,
   toggleFeaturedStatus
 }; 
