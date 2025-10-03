@@ -41,4 +41,16 @@ router.patch('/admin/status/:productId', productController.updateProductStatus);
 // PUT /api/products/admin/featured/:productId
 router.put('/admin/featured/:productId', productController.toggleFeaturedStatus);
 
+// 9. Add Product Variation
+// POST /api/products/admin/:productId/variations
+router.post('/admin/:productId/variations', productController.addProductVariation);
+
+// 10. Edit Product Variation
+// PUT /api/products/admin/:productId/variations/:variationId
+router.put('/admin/:productId/variations/:variationId', productController.editProductVariation);
+
+// 11. Delete Product Variation
+// DELETE /api/products/admin/:productId/variations/:variationId
+router.delete('/admin/:productId/variations/:variationId', productController.deleteProductVariation);
+
 module.exports = router; 

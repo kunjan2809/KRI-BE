@@ -930,6 +930,354 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # Add Product Variation (Admin only)
+  /api/products/admin/{productId}/variations:
+    post:
+      tags:
+        - Products
+      summary: Add product variation
+      description: Add a new variation (color, size, price) to an existing product
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - color
+                - size
+                - price
+              properties:
+                color:
+                  type: string
+                  description: Variation color
+                  maxLength: 50
+                  example: "Black"
+                size:
+                  type: string
+                  description: Variation size
+                  maxLength: 20
+                  example: "256GB"
+                price:
+                  type: number
+                  description: Variation price
+                  minimum: 0
+                  example: 999.99
+                stock_quantity:
+                  type: integer
+                  description: Stock quantity for this variation
+                  minimum: 0
+                  default: 0
+                  example: 50
+                sku:
+                  type: string
+                  description: Unique SKU for this variation
+                  maxLength: 100
+                  example: "IPHONE15PRO-BLACK-256"
+                status:
+                  type: string
+                  enum: ['active', 'inactive']
+                  description: Variation status
+                  default: 'active'
+                  example: "active"
+            example:
+              color: "Black"
+              size: "256GB"
+              price: 999.99
+              stock_quantity: 50
+              sku: "IPHONE15PRO-BLACK-256"
+              status: "active"
+      responses:
+        '201':
+          description: Product variation added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Product variation added successfully"
+                  data:
+                    type: object
+                    properties:
+                      variation:
+                        $ref: '#/components/schemas/ProductVariation'
+              example:
+                success: true
+                message: "Product variation added successfully"
+                data:
+                  variation:
+                    _id: "507f1f77bcf86cd799439025"
+                    product_id: "507f1f77bcf86cd799439011"
+                    color: "Black"
+                    size: "256GB"
+                    price: 999.99
+                    stock_quantity: 50
+                    sku: "IPHONE15PRO-BLACK-256"
+                    status: "active"
+                    variation_name: "Black - 256GB"
+                    created_at: "2024-01-15T10:30:00.000Z"
+                    updated_at: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Bad request - Missing required fields or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - Variation or SKU already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Edit Product Variation (Admin only)
+  /api/products/admin/{productId}/variations/{variationId}:
+    put:
+      tags:
+        - Products
+      summary: Edit product variation
+      description: Update an existing product variation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+        - name: variationId
+          in: path
+          required: true
+          description: Variation ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439025"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                color:
+                  type: string
+                  description: Variation color
+                  maxLength: 50
+                  example: "Space Gray"
+                size:
+                  type: string
+                  description: Variation size
+                  maxLength: 20
+                  example: "512GB"
+                price:
+                  type: number
+                  description: Variation price
+                  minimum: 0
+                  example: 1199.99
+                stock_quantity:
+                  type: integer
+                  description: Stock quantity for this variation
+                  minimum: 0
+                  example: 30
+                sku:
+                  type: string
+                  description: Unique SKU for this variation
+                  maxLength: 100
+                  example: "IPHONE15PRO-SPACEGRAY-512"
+                status:
+                  type: string
+                  enum: ['active', 'inactive']
+                  description: Variation status
+                  example: "active"
+            example:
+              color: "Space Gray"
+              size: "512GB"
+              price: 1199.99
+              stock_quantity: 30
+              sku: "IPHONE15PRO-SPACEGRAY-512"
+              status: "active"
+      responses:
+        '200':
+          description: Product variation updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Product variation updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      variation:
+                        $ref: '#/components/schemas/ProductVariation'
+              example:
+                success: true
+                message: "Product variation updated successfully"
+                data:
+                  variation:
+                    _id: "507f1f77bcf86cd799439025"
+                    product_id: "507f1f77bcf86cd799439011"
+                    color: "Space Gray"
+                    size: "512GB"
+                    price: 1199.99
+                    stock_quantity: 30
+                    sku: "IPHONE15PRO-SPACEGRAY-512"
+                    status: "active"
+                    variation_name: "Space Gray - 512GB"
+                    created_at: "2024-01-15T10:30:00.000Z"
+                    updated_at: "2024-01-15T11:00:00.000Z"
+        '400':
+          description: Bad request - Validation error or no fields provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product or variation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - Variation or SKU already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Products
+      summary: Delete product variation
+      description: Delete an existing product variation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+        - name: variationId
+          in: path
+          required: true
+          description: Variation ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439025"
+      responses:
+        '200':
+          description: Product variation deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Product variation deleted successfully"
+                  data:
+                    type: object
+                    properties:
+                      deleted_variation:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: "507f1f77bcf86cd799439025"
+                          color:
+                            type: string
+                            example: "Black"
+                          size:
+                            type: string
+                            example: "256GB"
+                          sku:
+                            type: string
+                            example: "IPHONE15PRO-BLACK-256"
+              example:
+                success: true
+                message: "Product variation deleted successfully"
+                data:
+                  deleted_variation:
+                    id: "507f1f77bcf86cd799439025"
+                    color: "Black"
+                    size: "256GB"
+                    sku: "IPHONE15PRO-BLACK-256"
+        '401':
+          description: Unauthorized - Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product or variation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
