@@ -94,6 +94,40 @@ const requireRole = (role) => {
   };
 };
 
+// Optional authentication middleware - doesn't fail if no token provided
+const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+      // No token provided, continue without user
+      req.user = null;
+      return next();
+    }
+
+    // Verify JWT token
+    const decoded = jwt.verify(token, config.JWT_SECRET);
+    
+    // Find user by ID from token
+    const user = await User.findById(decoded.userId).select('-password');
+    
+    if (!user) {
+      // Invalid user, continue without user
+      req.user = null;
+      return next();
+    }
+
+    // Add user info to request object
+    req.user = user;
+    next();
+  } catch (error) {
+    // Token invalid or expired, continue without user
+    req.user = null;
+    next();
+  }
+};
+
 // Combined middleware for authentication + role check
 const auth = (role = 'user') => {
   return [authenticateToken, requireRole(role)];
@@ -102,5 +136,6 @@ const auth = (role = 'user') => {
 module.exports = {
   authenticateToken,
   requireRole,
+  optionalAuth,
   auth
 }; 
