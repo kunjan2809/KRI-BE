@@ -1,0 +1,612 @@
+openapi: 3.0.0
+info:
+  title: Cart API
+  description: Cart management endpoints for e-commerce application
+  version: 1.0.0
+tags:
+  - name: Cart
+    description: Cart management operations
+paths:
+  /api/cart:
+    get:
+      tags:
+        - Cart
+      summary: Get cart items
+      description: Retrieve all items in the user's cart with product details and pricing
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cart items retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      cart_items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CartItem'
+                      cart_summary:
+                        $ref: '#/components/schemas/CartSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/cart/add:
+    post:
+      tags:
+        - Cart
+      summary: Add item to cart
+      description: Add a product to the user's cart or update quantity if already exists
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - product_id
+              properties:
+                product_id:
+                  type: string
+                  format: objectid
+                  description: Product ID to add to cart
+                  example: "64f1a2b3c4d5e6f7a8b9c0d1"
+                quantity:
+                  type: integer
+                  minimum: 1
+                  default: 1
+                  description: Quantity to add
+                  example: 2
+                variation_id:
+                  type: string
+                  format: objectid
+                  description: Optional product variation ID
+                  example: "64f1a2b3c4d5e6f7a8b9c0d2"
+      responses:
+        '201':
+          description: Item added to cart successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Item added to cart successfully"
+                  data:
+                    type: object
+                    properties:
+                      cart_item:
+                        $ref: '#/components/schemas/CartItemResponse'
+        '400':
+          description: Bad request - validation error or insufficient stock
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/cart/update/{cartItemId}:
+    patch:
+      tags:
+        - Cart
+      summary: Update cart item quantity
+      description: Update the quantity of a specific cart item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cartItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Cart item ID to update
+          example: "64f1a2b3c4d5e6f7a8b9c0d3"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quantity
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+                  description: New quantity
+                  example: 3
+      responses:
+        '200':
+          description: Cart item quantity updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Cart item quantity updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      cart_item:
+                        $ref: '#/components/schemas/CartItemResponse'
+        '400':
+          description: Bad request - validation error or insufficient stock
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Cart item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/cart/remove/{cartItemId}:
+    delete:
+      tags:
+        - Cart
+      summary: Remove item from cart
+      description: Remove a specific item from the user's cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cartItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Cart item ID to remove
+          example: "64f1a2b3c4d5e6f7a8b9c0d3"
+      responses:
+        '200':
+          description: Item removed from cart successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Item removed from cart successfully"
+                  data:
+                    type: object
+                    properties:
+                      removed_item:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: objectid
+                          product_id:
+                            type: string
+                            format: objectid
+                          variation_id:
+                            type: string
+                            format: objectid
+                            nullable: true
+        '404':
+          description: Cart item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/cart/clear:
+    delete:
+      tags:
+        - Cart
+      summary: Clear cart
+      description: Remove all items from the user's cart
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cart cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Cart cleared successfully"
+                  data:
+                    type: object
+                    properties:
+                      deleted_items_count:
+                        type: integer
+                        description: Number of items removed
+                        example: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: objectid
+          description: Cart item ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d3"
+        product:
+          $ref: '#/components/schemas/ProductSummary'
+        variation:
+          $ref: '#/components/schemas/ProductVariationSummary'
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity in cart
+          example: 2
+        item_total:
+          type: number
+          format: float
+          description: Total price for this item (price × quantity)
+          example: 199.98
+        added_at:
+          type: string
+          format: date-time
+          description: When item was added to cart
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: When item was last updated
+          example: "2024-01-15T10:30:00Z"
+
+    CartSummary:
+      type: object
+      properties:
+        total_items:
+          type: integer
+          description: Total number of items in cart
+          example: 5
+        cart_total:
+          type: number
+          format: float
+          description: Total cart value
+          example: 299.97
+        items_count:
+          type: integer
+          description: Number of unique products in cart
+          example: 3
+
+    CartItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: objectid
+          description: Cart item ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d3"
+        product_id:
+          type: string
+          format: objectid
+          description: Product ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+        variation_id:
+          type: string
+          format: objectid
+          nullable: true
+          description: Product variation ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d2"
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity in cart
+          example: 2
+        added_at:
+          type: string
+          format: date-time
+          description: When item was added to cart
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: When item was last updated
+          example: "2024-01-15T10:30:00Z"
+
+    ProductSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: objectid
+          description: Product ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+        name:
+          type: string
+          description: Product name
+          example: "iPhone 15 Pro"
+        sku:
+          type: string
+          description: Product SKU
+          example: "IPH15PRO-128"
+        description:
+          type: string
+          description: Product short description
+          example: "Latest iPhone with advanced features"
+        product_description:
+          type: string
+          description: Rich HTML product description
+          example: "<p>Advanced smartphone with cutting-edge technology</p>"
+        price:
+          type: number
+          format: float
+          description: Original price
+          example: 999.99
+        mrp:
+          type: number
+          format: float
+          description: Maximum retail price
+          example: 1099.99
+        final_price:
+          type: number
+          format: float
+          description: Final price after discount
+          example: 899.99
+        discount_type:
+          type: string
+          enum: [price, percentage, null]
+          description: Type of discount applied
+          example: "percentage"
+        discount_rate:
+          type: number
+          format: float
+          description: Discount rate
+          example: 10
+        discount_amount:
+          type: number
+          format: float
+          description: Discount amount
+          example: 100.00
+        stock_quantity:
+          type: integer
+          description: Available stock
+          example: 50
+        in_stock:
+          type: boolean
+          description: Whether product is in stock
+          example: true
+        low_stock:
+          type: boolean
+          description: Whether product has low stock (≤10)
+          example: false
+        weight:
+          type: number
+          format: float
+          description: Product weight
+          example: 0.5
+        status:
+          type: string
+          enum: [draft, published, deleted]
+          description: Product status
+          example: "published"
+        featured:
+          type: boolean
+          description: Whether product is featured
+          example: true
+        category:
+          type: object
+          properties:
+            id:
+              type: string
+              format: objectid
+            name:
+              type: string
+          description: Product category
+          example: {"id": "64f1a2b3c4d5e6f7a8b9c0d4", "name": "Electronics"}
+        primary_image:
+          type: object
+          nullable: true
+          description: Primary product image
+          properties:
+            id:
+              type: string
+              format: objectid
+            image_url:
+              type: string
+              description: Image URL
+            is_primary:
+              type: boolean
+        all_images:
+          type: array
+          description: All product images
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              format: objectid
+              image_url:
+                type: string
+              is_primary:
+                type: boolean
+        variations:
+          type: array
+          description: Product variations
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: objectid
+              color:
+                type: string
+              size:
+                type: string
+              price:
+                type: number
+                format: float
+              stock_quantity:
+                type: integer
+              sku:
+                type: string
+              status:
+                type: string
+        review_overview:
+          type: object
+          properties:
+            average_rating:
+              type: number
+              format: float
+              description: Average rating
+              example: 4.5
+            total_reviews:
+              type: integer
+              description: Total number of reviews
+              example: 25
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        edited_at:
+          type: string
+          format: date-time
+          description: Last edit timestamp
+
+    ProductVariationSummary:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: objectid
+          description: Variation ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d2"
+        color:
+          type: string
+          description: Variation color
+          example: "Space Black"
+        size:
+          type: string
+          description: Variation size
+          example: "128GB"
+        price:
+          type: number
+          format: float
+          description: Variation price
+          example: 999.99
+        price_adjustment:
+          type: number
+          format: float
+          description: Price adjustment for this variation
+          example: 0
+        stock_quantity:
+          type: integer
+          description: Available stock for this variation
+          example: 25
+        sku:
+          type: string
+          description: Variation SKU
+          example: "IPH15PRO-128-BLK"
+        status:
+          type: string
+          description: Variation status
+          example: "active"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: "Product not found or not available"
+        error:
+          type: string
+          description: Detailed error information
+          example: "Product with ID 64f1a2b3c4d5e6f7a8b9c0d1 not found"
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              code:
+                type: string
+                example: "UNAUTHORIZED"
+              message:
+                type: string
+                example: "Access token is required"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Error fetching cart items"
+              error:
+                type: string
+                example: "Database connection failed"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication

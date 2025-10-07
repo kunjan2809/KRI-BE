@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
-const { auth } = require('../middlewares/auth');
+const { auth, optionalAuth } = require('../middlewares/auth');
 
-// Public route for featured products (no authentication required)
-router.get('/featured', productController.getFeaturedProducts);
+// Public routes with optional authentication (for wishlist status)
+router.get('/featured', optionalAuth, productController.getFeaturedProducts);
+router.get('/all', optionalAuth, productController.searchProducts);
+router.get('/variation-options', productController.getUniqueVariationOptions);
 
 // All other product routes require admin authentication
 router.use(auth('admin'));

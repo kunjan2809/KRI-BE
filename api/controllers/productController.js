@@ -4,6 +4,7 @@ const Category = require('../models/Category');
 const ProductReview = require('../models/ProductReview');
 const ReviewImage = require('../models/ReviewImage');
 const ProductVariation = require('../models/ProductVariation');
+const Wishlist = require('../models/Wishlist');
 
 // 1. Get All Products with Filters (Admin only)
 const getAllProducts = async (req, res) => {
@@ -156,6 +157,7 @@ const addProduct = async (req, res) => {
       name,
       sku,
       description,
+      product_description,
       category_id,
       status,
       variations = [],
@@ -165,10 +167,10 @@ const addProduct = async (req, res) => {
     } = req.body;
     
     // Validate required fields
-    if (!name || !sku || !description || !category_id) {
+    if (!name || !sku || !description || !product_description || !category_id) {
       return res.status(400).json({
         success: false,
-        message: 'Name, SKU, description, and category are required'
+        message: 'Name, SKU, description, product description, and category are required'
       });
     }
     
@@ -229,6 +231,7 @@ const addProduct = async (req, res) => {
       name,
       sku,
       description,
+      product_description,
       price: price || (variations.length > 0 ? Math.min(...variations.map(v => v.price)) : 0),
       mrp: mrp || null,
       discount_type: discount_type || null,
@@ -574,6 +577,11 @@ const updateProductStatus = async (req, res) => {
 const getFeaturedProducts = async (req, res) => {
   try {
     const limit = 12; // Always return 12 products
+    const { include_wishlist_status = false } = req.query;
+    
+    // Check if user is authenticated and wishlist status is requested
+    const userId = req.user?._id;
+    const shouldIncludeWishlist = include_wishlist_status === 'true' && userId;
     
     // First, try to get featured products
     let products = await Product.find({
@@ -616,12 +624,25 @@ const getFeaturedProducts = async (req, res) => {
     const productsWithFullData = await Promise.all(
       products.map(async (product) => {
         // Get all images for the product
-        const [primaryImage, allImages, variations, reviewOverview] = await Promise.all([
+        const promises = [
           ProductImage.getPrimaryImage(product._id),
           ProductImage.getProductImages(product._id),
           ProductVariation.getProductVariations(product._id),
           ProductReview.getProductAverageRating(product._id)
-        ]);
+        ];
+        
+        // Add wishlist status check if requested
+        if (shouldIncludeWishlist) {
+          promises.push(
+            Wishlist.findOne({
+              user_id: userId,
+              product_id: product._id
+            })
+          );
+        }
+        
+        const results = await Promise.all(promises);
+        const [primaryImage, allImages, variations, reviewOverview, wishlistItem] = results;
         
         // Calculate review overview
         const reviewData = reviewOverview.length > 0 ? reviewOverview[0] : { 
@@ -629,7 +650,7 @@ const getFeaturedProducts = async (req, res) => {
           totalReviews: 0 
         };
         
-        return {
+        const productData = {
           ...(product.toObject ? product.toObject() : product),
           primary_image: primaryImage || null,
           all_images: allImages || [],
@@ -639,6 +660,13 @@ const getFeaturedProducts = async (req, res) => {
             total_reviews: reviewData.totalReviews || 0
           }
         };
+        
+        // Add wishlist status if requested
+        if (shouldIncludeWishlist) {
+          productData.is_in_wishlist = !!wishlistItem;
+        }
+        
+        return productData;
       })
     );
     
@@ -1033,6 +1061,424 @@ const toggleFeaturedStatus = async (req, res) => {
   }
 };
 
+// 13. Public Product Search with Filters and Sorting
+const searchProducts = async (req, res) => {
+  try {
+    const {
+      // Search parameters
+      search,
+      
+      // Filter parameters
+      min_price,
+      max_price,
+      color,
+      size,
+      category_id,
+      
+      // Sorting parameters
+      newest_first,
+      price_sort, // 'low_to_high' or 'high_to_low'
+      highest_rated,
+      
+      // Pagination parameters
+      page = 1,
+      limit = 20,
+      
+      // Wishlist integration
+      include_wishlist_status = false
+    } = req.query;
+
+    // Check if user is authenticated and wishlist status is requested
+    const userId = req.user?._id;
+    const shouldIncludeWishlist = include_wishlist_status === 'true' && userId;
+
+    const skip = (page - 1) * limit;
+    
+    // Build base filter query (only published, non-deleted products)
+    let filterQuery = {
+      status: 'published',
+      deleted_at: null
+    };
+    
+    // Add price range filter
+    if (min_price || max_price) {
+      filterQuery.price = {};
+      if (min_price) filterQuery.price.$gte = parseFloat(min_price);
+      if (max_price) filterQuery.price.$lte = parseFloat(max_price);
+    }
+    
+    // Add category filter
+    if (category_id) {
+      filterQuery.category_id = category_id;
+    }
+    
+    // Build aggregation pipeline for complex filtering and sorting
+    const pipeline = [
+      // Stage 1: Match base filters
+      { $match: filterQuery },
+      
+      // Stage 2: Lookup category for search and sorting
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'category_id',
+          foreignField: '_id',
+          as: 'category'
+        }
+      },
+      
+      // Stage 3: Lookup variations for color/size filtering
+      {
+        $lookup: {
+          from: 'productvariations',
+          localField: '_id',
+          foreignField: 'product_id',
+          as: 'variations'
+        }
+      },
+      
+      // Stage 4: Lookup reviews for rating calculation
+      {
+        $lookup: {
+          from: 'productreviews',
+          localField: '_id',
+          foreignField: 'product_id',
+          as: 'reviews'
+        }
+      },
+      
+      // Stage 4.5: Lookup wishlist status if user is authenticated and requested
+      ...(shouldIncludeWishlist ? [{
+        $lookup: {
+          from: 'wishlists',
+          let: { productId: '$_id', userId: userId },
+          pipeline: [
+            { 
+              $match: { 
+                $expr: { 
+                  $and: [
+                    { $eq: ['$product_id', '$$productId'] },
+                    { $eq: ['$user_id', '$$userId'] }
+                  ]
+                }
+              }
+            },
+            { $limit: 1 }
+          ],
+          as: 'wishlist_status'
+        }
+      }] : []),
+      
+      // Stage 5: Add computed fields
+      {
+        $addFields: {
+          category_name: { $arrayElemAt: ['$category.name', 0] },
+          average_rating: {
+            $cond: {
+              if: { $gt: [{ $size: '$reviews' }, 0] },
+              then: { $avg: '$reviews.rating' },
+              else: 0
+            }
+          },
+          total_reviews: { $size: '$reviews' },
+          available_colors: { $setUnion: ['$variations.color', []] },
+          available_sizes: { $setUnion: ['$variations.size', []] },
+          ...(shouldIncludeWishlist ? {
+            is_in_wishlist: { $gt: [{ $size: '$wishlist_status' }, 0] }
+          } : {})
+        }
+      },
+      
+      // Stage 6: Apply color filter if specified (exact match)
+      ...(color ? [{
+        $match: {
+          'variations.color': color.trim()
+        }
+      }] : []),
+      
+      // Stage 7: Apply size filter if specified (exact match)
+      ...(size ? [{
+        $match: {
+          'variations.size': size.trim()
+        }
+      }] : []),
+      
+      // Stage 8: Apply text search if specified
+      ...(search ? [{
+        $match: {
+          $or: [
+            { name: { $regex: new RegExp(search, 'i') } },
+            { description: { $regex: new RegExp(search, 'i') } },
+            { category_name: { $regex: new RegExp(search, 'i') } }
+          ]
+        }
+      }] : []),
+      
+      // Stage 9: Add search relevance score if search term provided
+      ...(search ? [{
+        $addFields: {
+          searchScore: {
+            $add: [
+              // Exact name match gets highest score
+              { $cond: [{ $regexMatch: { input: '$name', regex: new RegExp(`^${search}`, 'i') } }, 100, 0] },
+              // Name contains search term
+              { $cond: [{ $regexMatch: { input: '$name', regex: new RegExp(search, 'i') } }, 50, 0] },
+              // Description contains search term
+              { $cond: [{ $regexMatch: { input: '$description', regex: new RegExp(search, 'i') } }, 25, 0] },
+              // Category name contains search term
+              { $cond: [{ $regexMatch: { input: '$category_name', regex: new RegExp(search, 'i') } }, 10, 0] }
+            ]
+          }
+        }
+      }] : []),
+      
+      // Stage 10: Sort based on criteria
+      {
+        $sort: (() => {
+          if (search) {
+            // If searching, prioritize search relevance
+            return { searchScore: -1, created_at: -1 };
+          } else if (highest_rated) {
+            return { average_rating: -1, total_reviews: -1 };
+          } else if (price_sort === 'low_to_high') {
+            return { price: 1 };
+          } else if (price_sort === 'high_to_low') {
+            return { price: -1 };
+          } else if (newest_first) {
+            return { created_at: -1 };
+          } else {
+            // Default: newest first
+            return { created_at: -1 };
+          }
+        })()
+      },
+      
+      // Stage 11: Pagination
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+      
+      // Stage 12: Lookup primary image
+      {
+        $lookup: {
+          from: 'productimages',
+          let: { productId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $and: [{ $eq: ['$product_id', '$$productId'] }, { $eq: ['$is_primary', true] }] } } },
+            { $limit: 1 }
+          ],
+          as: 'primary_image'
+        }
+      },
+      
+      // Stage 13: Project final fields
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          sku: 1,
+          description: 1,
+          product_description: 1,
+          price: 1,
+          mrp: 1,
+          discount_type: 1,
+          discount_rate: 1,
+          final_price: 1,
+          discount_amount: 1,
+          stock_quantity: 1,
+          weight: 1,
+          status: 1,
+          featured: 1,
+          in_stock: 1,
+          low_stock: 1,
+          created_at: 1,
+          edited_at: 1,
+          category_id: 1,
+          category_name: 1,
+          average_rating: 1,
+          total_reviews: 1,
+          available_colors: 1,
+          available_sizes: 1,
+          primary_image: { $arrayElemAt: ['$primary_image', 0] },
+          ...(search ? { searchScore: 1 } : {}),
+          ...(shouldIncludeWishlist ? { is_in_wishlist: 1 } : {})
+        }
+      }
+    ];
+    
+    // Execute aggregation pipeline
+    const products = await Product.aggregate(pipeline);
+    
+    // Get total count for pagination (separate query for performance)
+    const countPipeline = [
+      { $match: filterQuery },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'category_id',
+          foreignField: '_id',
+          as: 'category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'productvariations',
+          localField: '_id',
+          foreignField: 'product_id',
+          as: 'variations'
+        }
+      },
+      {
+        $addFields: {
+          category_name: { $arrayElemAt: ['$category.name', 0] }
+        }
+      },
+      ...(color ? [{ $match: { 'variations.color': color.trim() } }] : []),
+      ...(size ? [{ $match: { 'variations.size': size.trim() } }] : []),
+      ...(search ? [{
+        $match: {
+          $or: [
+            { name: { $regex: new RegExp(search, 'i') } },
+            { description: { $regex: new RegExp(search, 'i') } },
+            { category_name: { $regex: new RegExp(search, 'i') } }
+          ]
+        }
+      }] : []),
+      { $count: 'total' }
+    ];
+    
+    const countResult = await Product.aggregate(countPipeline);
+    const totalProducts = countResult.length > 0 ? countResult[0].total : 0;
+    
+    res.json({
+      success: true,
+      data: {
+        products,
+        pagination: {
+          current_page: parseInt(page),
+          total_pages: Math.ceil(totalProducts / limit),
+          total_products: totalProducts,
+          limit: parseInt(limit)
+        },
+        filters: {
+          search,
+          min_price,
+          max_price,
+          color,
+          size,
+          category_id
+        },
+        sorting: {
+          newest_first,
+          price_sort,
+          highest_rated
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error searching products:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error searching products',
+      error: error.message
+    });
+  }
+};
+
+// 14. Get Unique Colors and Sizes (Public API)
+const getUniqueVariationOptions = async (req, res) => {
+  try {
+    const { category_id } = req.query;
+    
+    // Build base filter for variations (only from published, non-deleted products)
+    let baseFilter = {};
+    
+    // If category_id is provided, filter by category
+    if (category_id) {
+      baseFilter['product.category_id'] = category_id;
+    }
+    
+    // Get unique colors and sizes using aggregation
+    const pipeline = [
+      // Stage 1: Lookup products to filter by status and category
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'product_id',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      
+      // Stage 2: Unwind product array
+      { $unwind: '$product' },
+      
+      // Stage 3: Match only variations from published, non-deleted products
+      {
+        $match: {
+          'product.status': 'published',
+          'product.deleted_at': null,
+          ...baseFilter
+        }
+      },
+      
+      // Stage 4: Group to get unique colors and sizes
+      {
+        $group: {
+          _id: null,
+          unique_colors: { $addToSet: '$color' },
+          unique_sizes: { $addToSet: '$size' }
+        }
+      },
+      
+      // Stage 5: Project final result
+      {
+        $project: {
+          _id: 0,
+          colors: {
+            $sortArray: {
+              input: '$unique_colors',
+              sortBy: 1
+            }
+          },
+          sizes: {
+            $sortArray: {
+              input: '$unique_sizes',
+              sortBy: 1
+            }
+          }
+        }
+      }
+    ];
+    
+    const result = await ProductVariation.aggregate(pipeline);
+    
+    // If no variations found, return empty arrays
+    const variationOptions = result.length > 0 ? result[0] : { colors: [], sizes: [] };
+    
+    res.json({
+      success: true,
+      data: {
+        colors: variationOptions.colors,
+        sizes: variationOptions.sizes,
+        total_colors: variationOptions.colors.length,
+        total_sizes: variationOptions.sizes.length,
+        filters: {
+          category_id: category_id || null
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching unique variation options:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching unique variation options',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   addProduct,
@@ -1045,5 +1491,7 @@ module.exports = {
   addProductVariation,
   editProductVariation,
   deleteProductVariation,
-  toggleFeaturedStatus
+  toggleFeaturedStatus,
+  searchProducts,
+  getUniqueVariationOptions
 }; 

@@ -196,9 +196,13 @@ Product:
       example: "IPHONE15PRO-256GB"
     description:
       type: string
-      description: Product description
+      description: Product description (plain text)
       maxLength: 2000
       example: "Latest iPhone with advanced features"
+    product_description:
+      type: string
+      description: Rich text HTML content from editor
+      example: "<p>Latest iPhone with <strong>advanced features</strong> and <em>titanium design</em></p><ul><li>48MP Main camera</li><li>A17 Pro chip</li></ul>"
     price:
       type: number
       description: Product price
@@ -281,6 +285,7 @@ Product:
     - name
     - sku
     - description
+    - product_description
     - price
     - stock_quantity
     - category_id
@@ -817,9 +822,13 @@ ProductCreationRequest:
       example: "IPHONE15PRO-256GB"
     description:
       type: string
-      description: Product description
+      description: Product description (plain text)
       maxLength: 2000
       example: "Latest iPhone with advanced features"
+    product_description:
+      type: string
+      description: Rich text HTML content from editor
+      example: "<p>Latest iPhone with <strong>advanced features</strong> and <em>titanium design</em></p><ul><li>48MP Main camera</li><li>A17 Pro chip</li></ul>"
     category_id:
       type: string
       description: Category ID
@@ -890,6 +899,7 @@ ProductCreationRequest:
     - name
     - sku
     - description
+    - product_description
     - category_id
 
 # Product Variation Request
@@ -1272,6 +1282,10 @@ ProductWithPrimaryImage:
           description: Total number of reviews
           example: 25
       description: Review summary information
+    is_in_wishlist:
+      type: boolean
+      description: Whether the product is in the user's wishlist (only included when include_wishlist_status=true and user is authenticated)
+      example: false
 
 # Product List Response Schema
 ProductListResponse:

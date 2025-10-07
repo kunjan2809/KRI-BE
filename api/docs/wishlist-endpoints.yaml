@@ -1,0 +1,418 @@
+openapi: 3.0.0
+info:
+  title: Wishlist API
+  description: Wishlist management endpoints for e-commerce application
+  version: 1.0.0
+tags:
+  - name: Wishlist
+    description: Wishlist management operations
+paths:
+  /api/wishlist:
+    get:
+      tags:
+        - Wishlist
+      summary: Get wishlist items
+      description: Retrieve all items in the user's wishlist with product details
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Wishlist items retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      wishlist_items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/WishlistItem'
+                      wishlist_summary:
+                        $ref: '#/components/schemas/WishlistSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/wishlist/add:
+    post:
+      tags:
+        - Wishlist
+      summary: Add item to wishlist
+      description: Add a product to the user's wishlist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - product_id
+              properties:
+                product_id:
+                  type: string
+                  format: objectid
+                  description: Product ID to add to wishlist
+                  example: "64f1a2b3c4d5e6f7a8b9c0d1"
+      responses:
+        '201':
+          description: Item added to wishlist successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Item added to wishlist successfully"
+                  data:
+                    type: object
+                    properties:
+                      wishlist_item:
+                        $ref: '#/components/schemas/WishlistItemResponse'
+        '400':
+          description: Bad request - validation error or item already in wishlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/wishlist/remove/{productId}:
+    delete:
+      tags:
+        - Wishlist
+      summary: Remove item from wishlist
+      description: Remove a specific product from the user's wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Product ID to remove from wishlist
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+      responses:
+        '200':
+          description: Item removed from wishlist successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Item removed from wishlist successfully"
+                  data:
+                    type: object
+                    properties:
+                      removed_item:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: objectid
+                            description: Wishlist item ID
+                            example: "64f1a2b3c4d5e6f7a8b9c0d5"
+                          product_id:
+                            type: string
+                            format: objectid
+                            description: Product ID
+                            example: "64f1a2b3c4d5e6f7a8b9c0d1"
+        '404':
+          description: Product not found in wishlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    WishlistItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: objectid
+          description: Wishlist item ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d5"
+        product:
+          $ref: '#/components/schemas/ProductSummary'
+        added_at:
+          type: string
+          format: date-time
+          description: When item was added to wishlist
+          example: "2024-01-15T10:30:00Z"
+
+    WishlistSummary:
+      type: object
+      properties:
+        items_count:
+          type: integer
+          description: Number of items in wishlist
+          example: 8
+
+    WishlistItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: objectid
+          description: Wishlist item ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d5"
+        product_id:
+          type: string
+          format: objectid
+          description: Product ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+        added_at:
+          type: string
+          format: date-time
+          description: When item was added to wishlist
+          example: "2024-01-15T10:30:00Z"
+
+    ProductSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: objectid
+          description: Product ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+        name:
+          type: string
+          description: Product name
+          example: "iPhone 15 Pro"
+        sku:
+          type: string
+          description: Product SKU
+          example: "IPH15PRO-128"
+        description:
+          type: string
+          description: Product short description
+          example: "Latest iPhone with advanced features"
+        product_description:
+          type: string
+          description: Rich HTML product description
+          example: "<p>Advanced smartphone with cutting-edge technology</p>"
+        price:
+          type: number
+          format: float
+          description: Original price
+          example: 999.99
+        mrp:
+          type: number
+          format: float
+          description: Maximum retail price
+          example: 1099.99
+        final_price:
+          type: number
+          format: float
+          description: Final price after discount
+          example: 899.99
+        discount_type:
+          type: string
+          enum: [price, percentage, null]
+          description: Type of discount applied
+          example: "percentage"
+        discount_rate:
+          type: number
+          format: float
+          description: Discount rate
+          example: 10
+        discount_amount:
+          type: number
+          format: float
+          description: Discount amount
+          example: 100.00
+        stock_quantity:
+          type: integer
+          description: Available stock
+          example: 50
+        in_stock:
+          type: boolean
+          description: Whether product is in stock
+          example: true
+        low_stock:
+          type: boolean
+          description: Whether product has low stock (≤10)
+          example: false
+        weight:
+          type: number
+          format: float
+          description: Product weight
+          example: 0.5
+        status:
+          type: string
+          enum: [draft, published, deleted]
+          description: Product status
+          example: "published"
+        featured:
+          type: boolean
+          description: Whether product is featured
+          example: true
+        category:
+          type: object
+          properties:
+            id:
+              type: string
+              format: objectid
+            name:
+              type: string
+          description: Product category
+          example: {"id": "64f1a2b3c4d5e6f7a8b9c0d4", "name": "Electronics"}
+        primary_image:
+          type: object
+          nullable: true
+          description: Primary product image
+          properties:
+            id:
+              type: string
+              format: objectid
+            image_url:
+              type: string
+              description: Image URL
+            is_primary:
+              type: boolean
+        all_images:
+          type: array
+          description: All product images
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: objectid
+              image_url:
+                type: string
+              is_primary:
+                type: boolean
+        variations:
+          type: array
+          description: Product variations
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: objectid
+              color:
+                type: string
+              size:
+                type: string
+              price:
+                type: number
+                format: float
+              stock_quantity:
+                type: integer
+              sku:
+                type: string
+              status:
+                type: string
+        review_overview:
+          type: object
+          properties:
+            average_rating:
+              type: number
+              format: float
+              description: Average rating
+              example: 4.5
+            total_reviews:
+              type: integer
+              description: Total number of reviews
+              example: 25
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        edited_at:
+          type: string
+          format: date-time
+          description: Last edit timestamp
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: "Product not found or not available"
+        error:
+          type: string
+          description: Detailed error information
+          example: "Product with ID 64f1a2b3c4d5e6f7a8b9c0d1 not found"
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              code:
+                type: string
+                example: "UNAUTHORIZED"
+              message:
+                type: string
+                example: "Access token is required"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Error fetching wishlist items"
+              error:
+                type: string
+                example: "Database connection failed"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication

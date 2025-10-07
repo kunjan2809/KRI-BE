@@ -21,6 +21,12 @@ const productSchema = new mongoose.Schema({
     trim: true,
     maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
+  product_description: {
+    type: String,
+    required: [true, 'Product description (HTML) is required'],
+    trim: true,
+    description: 'Rich text HTML content from editor'
+  },
   price: {
     type: Number,
     required: [true, 'Product price is required'],
@@ -101,7 +107,14 @@ productSchema.index({ status: 1 });
 productSchema.index({ price: 1 });
 productSchema.index({ deleted_at: 1 }); // Index for soft delete queries
 productSchema.index({ featured: 1 }); // Index for featured products queries
-productSchema.index({ name: 'text', description: 'text' }); // Text search index
+productSchema.index({ created_at: -1 }); // Index for newest first sorting
+productSchema.index({ name: 'text', description: 'text', product_description: 'text' }, {
+  weights: {
+    name: 10,           // Highest priority for product name
+    description: 5,      // Medium priority for description
+    product_description: 3 // Lower priority for rich text
+  }
+}); // Enhanced text search index with weights
 
 // Virtual for final price after discount
 productSchema.virtual('final_price').get(function() {
