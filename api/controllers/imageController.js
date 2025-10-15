@@ -1,68 +1,25 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const ProductImage = require('../models/ProductImage');
 const ReviewImage = require('../models/ReviewImage');
 const Product = require('../models/Product');
 const ProductReview = require('../models/ProductReview');
+const { storageConfigs, fileFilters, cloudinaryUtils } = require('../config/cloudinary');
 
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        // Determine destination based on upload type
-        const uploadType = req.uploadType; // Will be set by middleware
-        const entityId = req.entityId; // Will be set by middleware
-
-        if (uploadType === 'product') {
-            const productPath = path.join(__dirname, '../../static/images/product', entityId);
-            // Create product-specific directory if it doesn't exist
-            if (!fs.existsSync(productPath)) {
-                fs.mkdirSync(productPath, { recursive: true });
-            }
-            cb(null, productPath);
-        } else if (uploadType === 'review') {
-            const reviewPath = path.join(__dirname, '../../static/images/review', entityId);
-            // Create review-specific directory if it doesn't exist
-            if (!fs.existsSync(reviewPath)) {
-                fs.mkdirSync(reviewPath, { recursive: true });
-            }
-            cb(null, reviewPath);
-        } else {
-            cb(new Error('Invalid upload type'), null);
-        }
-    },
-    filename: function (req, file, cb) {
-        // Generate filename: <timestamp>_<originalname>_<random4digitcode>
-        const timestamp = Date.now();
-        const originalName = path.parse(file.originalname).name;
-        const randomCode = Math.floor(1000 + Math.random() * 9000); // 4-digit random code
-        const extension = path.extname(file.originalname);
-
-        const filename = `${timestamp}_${originalName}_${randomCode}${extension}`;
-        cb(null, filename);
+// Create multer instances for different upload types using global config
+const uploadProduct = multer({
+    storage: storageConfigs.productImages,
+    fileFilter: fileFilters.images,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
     }
 });
 
-// File filter to only allow image files
-const fileFilter = (req, file, cb) => {
-    // Check if file has image extension
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.svg'];
-    const fileExtension = path.extname(file.originalname).toLowerCase();
-
-    if (allowedExtensions.includes(fileExtension)) {
-        cb(null, true);
-    } else {
-        cb(new Error('Only image files are allowed'), false);
-    }
-};
-
-// Create multer instance
-const upload = multer({
-    storage: storage,
-    fileFilter: fileFilter,
+const uploadReview = multer({
+    storage: storageConfigs.reviewImages,
+    fileFilter: fileFilters.images,
     limits: {
-        fileSize: Infinity // No file size limit as requested
+        fileSize: 10 * 1024 * 1024 // 10MB limit
     }
 });
 
@@ -97,17 +54,17 @@ const uploadProductImage = async (req, res) => {
             });
         }
 
-        // Generate relative path for database storage
-        const relativePath = `/static/images/product/${productId}/${req.file.filename}`;
+        // Get Cloudinary URL from uploaded file
+        const cloudinaryUrl = req.file.path;
 
         // Create product image record
         const productImage = new ProductImage({
             product_id: productId,
-            image_url: relativePath,
+            image_url: cloudinaryUrl,
             is_primary: isPrimary === 'true' || isPrimary === true
         });
 
-        await productImage.save();
+        const savedProductImage = await productImage.save();
 
         res.status(201).json({
             success: true,
@@ -181,13 +138,13 @@ const uploadReviewImage = async (req, res) => {
             });
         }
 
-        // Generate relative path for database storage
-        const relativePath = `/static/images/review/${reviewId}/${req.file.filename}`;
+        // Get Cloudinary URL from uploaded file
+        const cloudinaryUrl = req.file.path;
 
         // Create review image record
         const reviewImage = new ReviewImage({
             review_id: reviewId,
-            image_url: relativePath
+            image_url: cloudinaryUrl
         });
 
         await reviewImage.save();
@@ -255,12 +212,16 @@ const deleteProductImage = async (req, res) => {
             });
         }
 
-        // Get the full file path
-        const fullPath = path.join(__dirname, '../..', productImage.image_url);
+        // Extract public ID from Cloudinary URL for deletion
+        const cloudinaryUrl = productImage.image_url;
+        const publicId = cloudinaryUtils.extractPublicId(cloudinaryUrl);
 
-        // Delete the file from filesystem if it exists
-        if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
+        // Delete the image from Cloudinary using global utility
+        try {
+            await cloudinaryUtils.deleteFile(publicId);
+        } catch (cloudinaryError) {
+            console.warn('Failed to delete image from Cloudinary:', cloudinaryError.message);
+            // Continue with database deletion even if Cloudinary deletion fails
         }
 
         // Delete the database record
@@ -289,19 +250,104 @@ const deleteProductImage = async (req, res) => {
     }
 };
 
-// Middleware to set upload type and entity ID for multer
-const setUploadContext = (uploadType) => {
-    return (req, res, next) => {
-        req.uploadType = uploadType;
-        req.entityId = req.params[uploadType === 'product' ? 'productId' : 'reviewId'];
-        next();
-    };
+// 4. Update Product Image
+const updateProductImage = async (req, res) => {
+    try {
+        const { imageId } = req.params;
+        console.log('=== UPDATE PRODUCT IMAGE DEBUG ===');
+        console.log('Image ID:', imageId);
+        console.log('Request method:', req.method);
+        console.log('Request headers:', req.headers);
+        console.log('Request body:', req.body);
+        console.log('Request body type:', typeof req.body);
+        console.log('Request body keys:', req.body ? Object.keys(req.body) : 'N/A');
+        console.log('===================================');
+        
+        // Check if body exists and has the required field
+        if (!req.body || typeof req.body !== 'object') {
+            return res.status(400).json({
+                success: false,
+                message: 'Request body is required and must be a valid JSON object',
+                debug: {
+                    bodyExists: !!req.body,
+                    bodyType: typeof req.body,
+                    bodyContent: req.body
+                }
+            });
+        }
+
+        const { is_primary } = req.body;
+
+        // Validate imageId
+        if (!imageId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Image ID is required'
+            });
+        }
+
+        // Validate is_primary field
+        if (typeof is_primary !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: 'is_primary must be a boolean value'
+            });
+        }
+
+        // Find the product image
+        const productImage = await ProductImage.findById(imageId);
+        if (!productImage) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product image not found'
+            });
+        }
+
+        // If setting as primary, unset other primary images for the same product
+        if (is_primary) {
+            await ProductImage.updateMany(
+                { 
+                    product_id: productImage.product_id, 
+                    _id: { $ne: imageId } 
+                },
+                { is_primary: false }
+            );
+        }
+
+        // Update the image
+        productImage.is_primary = is_primary;
+        await productImage.save();
+
+        res.json({
+            success: true,
+            message: 'Product image updated successfully',
+            data: {
+                image: {
+                    _id: productImage._id,
+                    product_id: productImage.product_id,
+                    image_url: productImage.image_url,
+                    is_primary: productImage.is_primary,
+                    created_at: productImage.created_at,
+                    updated_at: productImage.updated_at
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error updating product image:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating product image',
+            error: error.message
+        });
+    }
 };
 
 module.exports = {
     uploadProductImage,
     uploadReviewImage,
     deleteProductImage,
-    setUploadContext,
-    upload
+    updateProductImage,
+    uploadProduct,
+    uploadReview
 }; 

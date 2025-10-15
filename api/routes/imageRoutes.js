@@ -10,22 +10,28 @@ router.use(auth('user'));
 // POST /api/images/product/:productId
 // Body: multipart/form-data with 'image' file and 'isPrimary' boolean
 router.post('/product/:productId', 
-  imageController.setUploadContext('product'),
-  imageController.upload.single('image'),
+  imageController.uploadProduct.single('image'),
   imageController.uploadProductImage
-);
-
-// 2. Upload Review Image
-// POST /api/images/review/:reviewId
-// Body: multipart/form-data with 'image' file
-router.post('/review/:reviewId',
-  imageController.setUploadContext('review'),
-  imageController.upload.single('image'),
-  imageController.uploadReviewImage
 );
 
 // 3. Delete Product Image
 // DELETE /api/images/product/:imageId
 router.delete('/product/:imageId', imageController.deleteProductImage);
+
+// 4. Update Product Image
+// PUT /api/images/product/:imageId
+router.put('/product/:imageId', 
+  imageController.updateProductImage
+);
+
+
+// 2. Upload Review Image
+// POST /api/images/review/:reviewId
+// Body: multipart/form-data with 'image' file
+router.post('/review/:reviewId',
+  imageController.uploadReview.single('image'),
+  imageController.uploadReviewImage
+);
+
 
 module.exports = router; 
