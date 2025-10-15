@@ -180,11 +180,13 @@ const addToCart = async (req, res) => {
       });
     }
 
-    // Check variation if provided
+    // Check variation if provided (active variations only)
     if (variation_id) {
       const variation = await ProductVariation.findOne({
         _id: variation_id,
-        product_id: product_id
+        product_id: product_id,
+        status: 'active',
+        deleted_at: null
       });
 
       if (!variation) {
@@ -222,7 +224,11 @@ const addToCart = async (req, res) => {
       // Update quantity
       const newQuantity = existingCartItem.quantity + quantity;
       const availableStock = variation_id 
-        ? (await ProductVariation.findById(variation_id)).stock_quantity
+        ? (await ProductVariation.findOne({ 
+            _id: variation_id, 
+            status: 'active', 
+            deleted_at: null 
+          })).stock_quantity
         : product.stock_quantity;
 
       if (newQuantity > availableStock) {
