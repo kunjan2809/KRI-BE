@@ -1,0 +1,620 @@
+openapi: 3.0.0
+info:
+  title: E-Commerce Product Review API
+  description: User APIs for managing product reviews and review images
+  version: 1.0.0
+  contact:
+    name: E-Commerce Backend Team
+    email: support@ecommerce.com
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.ecommerce.com
+    description: Production server
+
+tags:
+  - name: Product Reviews
+    description: User APIs for managing product reviews
+
+paths:
+  /api/reviews/product/{productId}:
+    get:
+      tags:
+        - Product Reviews
+      summary: Get Product Reviews
+      description: |
+        Retrieve all reviews for a specific product with images and metadata.
+        Returns review summary statistics and detailed review data with user information.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to get reviews for
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Product reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductReviewsResponse'
+              example:
+                success: true
+                data:
+                  product:
+                    _id: "507f1f77bcf86cd799439011"
+                    name: "iPhone 15 Pro"
+                    sku: "IPHONE15PRO-256GB"
+                  reviews:
+                    summary:
+                      average_rating: 4.5
+                      total_reviews: 23
+                      rating_distribution:
+                        - _id: 5
+                          count: 15
+                        - _id: 4
+                          count: 6
+                        - _id: 3
+                          count: 2
+                    details:
+                      - _id: "507f1f77bcf86cd799439015"
+                        product_id: "507f1f77bcf86cd799439011"
+                        user_id:
+                          _id: "507f1f77bcf86cd799439013"
+                          first_name: "John"
+                          last_name: "Doe"
+                          email: "john@example.com"
+                        title: "Amazing product!"
+                        rating: 5
+                        rating_description: "Excellent quality and fast delivery"
+                        order_id: "507f1f77bcf86cd799439017"
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        edited_at: "2024-01-15T10:30:00.000Z"
+                        images:
+                          - _id: "507f1f77bcf86cd799439018"
+                            review_id: "507f1f77bcf86cd799439015"
+                            image_url: "https://res.cloudinary.com/example/image/upload/v1234567890/reviews/review-1.jpg"
+                            created_at: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Bad request - Invalid product ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Product Reviews
+      summary: Create Product Review
+      description: |
+        Create a new review for a product. Users can only create one review per product.
+        Requires authentication and the product must exist.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to create review for
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+            example:
+              title: "Great product!"
+              rating_description: "Really happy with this purchase. Quality is excellent and delivery was super fast."
+              rating: 5
+              order_id: "507f1f77bcf86cd799439017"
+      responses:
+        '201':
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewCreationResponse'
+              example:
+                success: true
+                message: "Product review created successfully"
+                data:
+                  review:
+                    _id: "507f1f77bcf86cd799439015"
+                    product_id: "507f1f77bcf86cd799439011"
+                    user_id:
+                      _id: "507f1f77bcf86cd799439013"
+                      first_name: "John"
+                      last_name: "Doe"
+                      email: "john@example.com"
+                    title: "Great product!"
+                    rating_description: "Really happy with this purchase. Quality is excellent and delivery was super fast."
+                    rating: 5
+                    order_id: "507f1f77bcf86cd799439017"
+                    created_at: "2024-01-15T10:30:00.000Z"
+                    edited_at: "2024-01-15T10:30:00.000Z"
+        '400':
+          description: Bad request - Missing required fields or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - User has already reviewed this product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/reviews/{reviewId}:
+    put:
+      tags:
+        - Product Reviews
+      summary: Update Product Review
+      description: |
+        Update an existing review. Users can only update their own reviews.
+        All fields are optional - only provided fields will be updated.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          description: Review ID to update
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439015"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewRequest'
+            example:
+              title: "Updated review title"
+              rating_description: "Updated review description"
+              rating: 4
+      responses:
+        '200':
+          description: Review updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewUpdateResponse'
+              example:
+                success: true
+                message: "Product review updated successfully"
+                data:
+                  review:
+                    _id: "507f1f77bcf86cd799439015"
+                    product_id: "507f1f77bcf86cd799439011"
+                    user_id:
+                      _id: "507f1f77bcf86cd799439013"
+                      first_name: "John"
+                      last_name: "Doe"
+                      email: "john@example.com"
+                    title: "Updated review title"
+                    rating_description: "Updated review description"
+                    rating: 4
+                    order_id: "507f1f77bcf86cd799439017"
+                    created_at: "2024-01-15T10:30:00.000Z"
+                    edited_at: "2024-01-15T11:30:00.000Z"
+        '400':
+          description: Bad request - Invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Review not found or user not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Product Reviews
+      summary: Delete Product Review
+      description: |
+        Delete a review and all associated images. Users can only delete their own reviews.
+        This action is permanent and cannot be undone.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          description: Review ID to delete
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439015"
+      responses:
+        '200':
+          description: Review deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDeletionResponse'
+              example:
+                success: true
+                message: "Product review and associated images deleted successfully"
+                data:
+                  deleted_review_id: "507f1f77bcf86cd799439015"
+                  deleted_images_count: 3
+        '400':
+          description: Bad request - Invalid review ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Review not found or user not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/reviews/user:
+    get:
+      tags:
+        - Product Reviews
+      summary: Get User Reviews
+      description: |
+        Retrieve all reviews created by the authenticated user.
+        Returns reviews with product details and associated images.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserReviewsResponse'
+              example:
+                success: true
+                data:
+                  reviews:
+                    - _id: "507f1f77bcf86cd799439015"
+                      product_id:
+                        _id: "507f1f77bcf86cd799439011"
+                        name: "iPhone 15 Pro"
+                        sku: "IPHONE15PRO-256GB"
+                      order_id:
+                        _id: "507f1f77bcf86cd799439017"
+                        order_number: "ORD-2024-001"
+                      title: "Amazing product!"
+                      rating: 5
+                      rating_description: "Excellent quality and fast delivery"
+                      created_at: "2024-01-15T10:30:00.000Z"
+                      edited_at: "2024-01-15T10:30:00.000Z"
+                      images:
+                        - _id: "507f1f77bcf86cd799439018"
+                          review_id: "507f1f77bcf86cd799439015"
+                          image_url: "https://res.cloudinary.com/example/image/upload/v1234567890/reviews/review-1.jpg"
+                          created_at: "2024-01-15T10:30:00.000Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    CreateReviewRequest:
+      type: object
+      required:
+        - title
+        - rating_description
+        - rating
+      properties:
+        title:
+          type: string
+          description: Review title
+          maxLength: 200
+          example: "Great product!"
+        rating_description:
+          type: string
+          description: Detailed review description
+          maxLength: 1000
+          example: "Really happy with this purchase. Quality is excellent and delivery was super fast."
+        rating:
+          type: integer
+          description: Rating from 1 to 5
+          minimum: 1
+          maximum: 5
+          example: 5
+        order_id:
+          type: string
+          description: Reference to order (optional)
+          nullable: true
+          example: "507f1f77bcf86cd799439017"
+
+    UpdateReviewRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Review title
+          maxLength: 200
+          example: "Updated review title"
+        rating_description:
+          type: string
+          description: Detailed review description
+          maxLength: 1000
+          example: "Updated review description"
+        rating:
+          type: integer
+          description: Rating from 1 to 5
+          minimum: 1
+          maximum: 5
+          example: 4
+
+    ProductReviewsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        data:
+          type: object
+          properties:
+            product:
+              type: object
+              properties:
+                _id:
+                  type: string
+                  example: "507f1f77bcf86cd799439011"
+                name:
+                  type: string
+                  example: "iPhone 15 Pro"
+                sku:
+                  type: string
+                  example: "IPHONE15PRO-256GB"
+            reviews:
+              type: object
+              properties:
+                summary:
+                  type: object
+                  properties:
+                    average_rating:
+                      type: number
+                      example: 4.5
+                    total_reviews:
+                      type: integer
+                      example: 23
+                    rating_distribution:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          _id:
+                            type: number
+                            example: 5
+                          count:
+                            type: integer
+                            example: 15
+                details:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ProductReviewWithImages'
+          required:
+            - product
+            - reviews
+      required:
+        - success
+        - data
+
+    ReviewCreationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Product review created successfully"
+        data:
+          type: object
+          properties:
+            review:
+              $ref: '#/components/schemas/ProductReviewWithUser'
+          required:
+            - review
+      required:
+        - success
+        - message
+        - data
+
+    ReviewUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Product review updated successfully"
+        data:
+          type: object
+          properties:
+            review:
+              $ref: '#/components/schemas/ProductReviewWithUser'
+          required:
+            - review
+      required:
+        - success
+        - message
+        - data
+
+    ReviewDeletionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Product review and associated images deleted successfully"
+        data:
+          type: object
+          properties:
+            deleted_review_id:
+              type: string
+              example: "507f1f77bcf86cd799439015"
+            deleted_images_count:
+              type: integer
+              example: 3
+          required:
+            - deleted_review_id
+            - deleted_images_count
+      required:
+        - success
+        - message
+        - data
+
+    UserReviewsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        data:
+          type: object
+          properties:
+            reviews:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductReviewWithProduct'
+          required:
+            - reviews
+      required:
+        - success
+        - data
+
+    ProductReviewWithImages:
+      allOf:
+        - $ref: '#/components/schemas/ProductReview'
+        - type: object
+          properties:
+            images:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReviewImage'
+              description: Associated review images
+
+    ProductReviewWithUser:
+      allOf:
+        - $ref: '#/components/schemas/ProductReview'
+        - type: object
+          properties:
+            user_id:
+              $ref: '#/components/schemas/User'
+
+    ProductReviewWithProduct:
+      allOf:
+        - $ref: '#/components/schemas/ProductReview'
+        - type: object
+          properties:
+            product_id:
+              type: object
+              properties:
+                _id:
+                  type: string
+                  example: "507f1f77bcf86cd799439011"
+                name:
+                  type: string
+                  example: "iPhone 15 Pro"
+                sku:
+                  type: string
+                  example: "IPHONE15PRO-256GB"
+            order_id:
+              type: object
+              properties:
+                _id:
+                  type: string
+                  example: "507f1f77bcf86cd799439017"
+                order_number:
+                  type: string
+                  example: "ORD-2024-001"
+            images:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReviewImage'
+              description: Associated review images
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: "Error message here"
+        error:
+          type: string
+          description: Detailed error information
+          example: "Detailed error information"
+      required:
+        - success
+        - message
