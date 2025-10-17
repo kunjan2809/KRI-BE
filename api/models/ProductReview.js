@@ -11,19 +11,24 @@ const productReviewSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'User ID is required']
   },
+  title: {
+    type: String,
+    required: [true, 'Review title is required'],
+    trim: true,
+    maxlength: [200, 'Review title cannot exceed 200 characters']
+  },
   rating: {
     type: Number,
     required: [true, 'Rating is required'],
-    min: [0, 'Rating cannot be negative'],
+    min: [1, 'Rating must be at least 1'],
     max: [5, 'Rating cannot exceed 5'],
     validate: {
       validator: function(value) {
-        // Check if rating is in 0.5 increments from 0 to 5
-        return value >= 0 && value <= 5 && (value * 2) % 1 === 0;
+        // Check if rating is an integer between 1 and 5
+        return Number.isInteger(value) && value >= 1 && value <= 5;
       },
-      message: 'Rating must be in 0.5 increments from 0 to 5 (e.g., 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5)'
-    },
-    set: v => Math.round(v * 2) / 2 // Round to nearest 0.5
+      message: 'Rating must be an integer between 1 and 5'
+    }
   },
   rating_description: {
     type: String,

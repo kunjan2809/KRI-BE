@@ -5,6 +5,8 @@ const ProductReview = require('../models/ProductReview');
 const ReviewImage = require('../models/ReviewImage');
 const ProductVariation = require('../models/ProductVariation');
 const Wishlist = require('../models/Wishlist');
+const OrderItem = require('../models/OrderItem');
+const Order = require('../models/Order');
 
 // 1. Get All Products with Filters (Admin only)
 const getAllProducts = async (req, res) => {
@@ -432,11 +434,37 @@ const getProductDetails = async (req, res) => {
     }
     
     // Get comprehensive product data
-    const [productImages, variations, reviewSummary, reviewDetails] = await Promise.all([
+    const [productImages, variations, reviewSummary, reviewDetails, totalSold] = await Promise.all([
       ProductImage.getProductImages(productId),
       ProductVariation.getProductVariations(productId),
       ProductReview.getProductAverageRating(productId),
-      ProductReview.getProductReviews(productId, 50, 0) // Get up to 50 reviews
+      ProductReview.getProductReviews(productId, 50, 0), // Get up to 50 reviews
+      // Get total sold count for this product
+      OrderItem.aggregate([
+        {
+          $lookup: {
+            from: 'orders',
+            localField: 'order_id',
+            foreignField: '_id',
+            as: 'order'
+          }
+        },
+        {
+          $unwind: '$order'
+        },
+        {
+          $match: {
+            product_id: product._id,
+            'order.order_status': 'delivered'
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalSold: { $sum: '$quantity' }
+          }
+        }
+      ])
     ]);
     
     // Get images for all reviews
@@ -455,13 +483,17 @@ const getProductDetails = async (req, res) => {
       totalReviews: 0 
     };
     
+    // Get total sold count
+    const soldCount = totalSold.length > 0 ? totalSold[0].totalSold : 0;
+    
     res.json({
       success: true,
       data: {
         product: {
           ...product.toObject(),
           images: productImages,
-          variations: variations || []
+          variations: variations || [],
+          sold: soldCount
         },
         reviews: {
           summary: {

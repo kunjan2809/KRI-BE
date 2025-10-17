@@ -33,5 +33,9 @@ router.post('/review/:reviewId',
   imageController.uploadReviewImage
 );
 
+// 5. Delete Review Image
+// DELETE /api/images/review/:imageId
+router.delete('/review/:imageId', imageController.deleteReviewImage);
+
 
 module.exports = router; 

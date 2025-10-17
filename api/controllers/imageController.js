@@ -343,11 +343,71 @@ const updateProductImage = async (req, res) => {
     }
 };
 
+// 5. Delete Review Image
+const deleteReviewImage = async (req, res) => {
+    try {
+        const { imageId } = req.params;
+        const userId = req.user.id; // From auth middleware
+
+        // Validate imageId
+        if (!imageId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Image ID is required'
+            });
+        }
+
+        // Find the review image
+        const reviewImage = await ReviewImage.findById(imageId).populate('review_id');
+        if (!reviewImage) {
+            return res.status(404).json({
+                success: false,
+                message: 'Review image not found'
+            });
+        }
+
+        // Check if the user owns the review
+        if (reviewImage.review_id.user_id.toString() !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You are not authorized to delete this review image'
+            });
+        }
+
+        // Delete from Cloudinary
+        const publicId = cloudinaryUtils.extractPublicId(reviewImage.image_url);
+        if (publicId) {
+            await cloudinaryUtils.deleteFile(publicId, 'image');
+        }
+
+        // Delete from database
+        await ReviewImage.findByIdAndDelete(imageId);
+
+        res.json({
+            success: true,
+            message: 'Review image deleted successfully',
+            data: {
+                deleted_image_id: imageId,
+                review_id: reviewImage.review_id._id
+            }
+        });
+
+    } catch (error) {
+        console.error('Error deleting review image:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting review image',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     uploadProductImage,
     uploadReviewImage,
     deleteProductImage,
     updateProductImage,
+    deleteReviewImage,
     uploadProduct,
     uploadReview
 }; 
