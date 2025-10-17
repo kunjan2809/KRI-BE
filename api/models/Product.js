@@ -148,12 +148,17 @@ productSchema.virtual('discount_amount').get(function() {
 
 // Virtual for stock status
 productSchema.virtual('in_stock').get(function() {
-  return this.stock_quantity > 0;
+  return this.stock_quantity > 50;
 });
 
 // Virtual for low stock warning
 productSchema.virtual('low_stock').get(function() {
-  return this.stock_quantity > 0 && this.stock_quantity <= 10;
+  return this.stock_quantity >= 1 && this.stock_quantity <= 50;
+});
+
+// Virtual for out of stock status
+productSchema.virtual('out_of_stock').get(function() {
+  return this.stock_quantity === 0;
 });
 
 // Virtual for is deleted

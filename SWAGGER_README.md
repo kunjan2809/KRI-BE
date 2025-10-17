@@ -21,10 +21,26 @@ http://localhost:5000/api-docs
 - **POST /api/auth/reset-password** - Reset password with token
 - **GET /api/auth/profile** - Get user profile (protected)
 
-### **2. Example APIs (Role-Based Access)**
-- **GET /api/example/user-content** - Accessible to both users and admins
-- **GET /api/example/admin-content** - Accessible only to admins
-- **GET /api/example/public-content** - Accessible to both users and admins
+### **2. Product Management APIs**
+- **GET /api/products/admin/all** - Get all products with filters (Admin only)
+- **POST /api/products/admin/add** - Add new product (Admin only)
+- **PUT /api/products/admin/edit/{productId}** - Edit product (Admin only)
+- **DELETE /api/products/admin/delete/{productId}** - Soft delete product (Admin only)
+- **GET /api/products/admin/details/{productId}** - Get product details with sold count (Admin only)
+
+### **3. Product Review APIs**
+- **GET /api/reviews/product/{productId}** - Get all reviews for a product
+- **POST /api/reviews/product/{productId}** - Create new review
+- **PUT /api/reviews/{reviewId}** - Update review
+- **DELETE /api/reviews/{reviewId}** - Delete review
+- **GET /api/reviews/user** - Get user's reviews
+
+### **4. Image Management APIs**
+- **POST /api/images/product/{productId}** - Upload product image
+- **DELETE /api/images/product/{imageId}** - Delete product image
+- **PUT /api/images/product/{imageId}** - Update product image properties
+- **POST /api/images/review/{reviewId}** - Upload review image
+- **DELETE /api/images/review/{imageId}** - Delete review image
 
 ## 📋 **Documentation Features**
 

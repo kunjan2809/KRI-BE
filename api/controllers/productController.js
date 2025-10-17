@@ -5,6 +5,8 @@ const ProductReview = require('../models/ProductReview');
 const ReviewImage = require('../models/ReviewImage');
 const ProductVariation = require('../models/ProductVariation');
 const Wishlist = require('../models/Wishlist');
+const OrderItem = require('../models/OrderItem');
+const Order = require('../models/Order');
 
 // 1. Get All Products with Filters (Admin only)
 const getAllProducts = async (req, res) => {
@@ -20,7 +22,7 @@ const getAllProducts = async (req, res) => {
     } = req.query;
 
     const skip = (page - 1) * limit;
-    
+
     // Build filter query
     let filterQuery = {};
     
@@ -30,11 +32,13 @@ const getAllProducts = async (req, res) => {
       { status: { $ne: 'deleted' } }
     ];
     
+    
     // Stock level filters
     if (stock_filters && stock_filters.length > 0) {
       const stockConditions = [];
+      const tmpStockFilters = Array.isArray(stock_filters) ? stock_filters : [stock_filters];
       
-      stock_filters.forEach(filter => {
+      tmpStockFilters.forEach(filter => {
         switch (filter) {
           case 'in_stock':
             stockConditions.push({ stock_quantity: { $gt: 50 } });
@@ -213,9 +217,13 @@ const addProduct = async (req, res) => {
           });
         }
         
-        // Check for duplicate variation SKUs
+        // Check for duplicate variation SKUs (active variations only)
         if (variation.sku) {
-          const existingVariation = await ProductVariation.findOne({ sku: variation.sku });
+          const existingVariation = await ProductVariation.findOne({ 
+            sku: variation.sku,
+            status: 'active',
+            deleted_at: null
+          });
           if (existingVariation) {
             return res.status(400).json({
               success: false,
@@ -389,7 +397,7 @@ const softDeleteProduct = async (req, res) => {
     // Soft delete by setting deleted_at and status
     product.deleted_at = new Date();
     product.status = 'deleted';
-    await product.save();
+    await product.save({ validateBeforeSave: false });
     
     res.json({
       success: true,
@@ -426,11 +434,37 @@ const getProductDetails = async (req, res) => {
     }
     
     // Get comprehensive product data
-    const [productImages, variations, reviewSummary, reviewDetails] = await Promise.all([
+    const [productImages, variations, reviewSummary, reviewDetails, totalSold] = await Promise.all([
       ProductImage.getProductImages(productId),
       ProductVariation.getProductVariations(productId),
       ProductReview.getProductAverageRating(productId),
-      ProductReview.getProductReviews(productId, 50, 0) // Get up to 50 reviews
+      ProductReview.getProductReviews(productId, 50, 0), // Get up to 50 reviews
+      // Get total sold count for this product
+      OrderItem.aggregate([
+        {
+          $lookup: {
+            from: 'orders',
+            localField: 'order_id',
+            foreignField: '_id',
+            as: 'order'
+          }
+        },
+        {
+          $unwind: '$order'
+        },
+        {
+          $match: {
+            product_id: product._id,
+            'order.order_status': 'delivered'
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalSold: { $sum: '$quantity' }
+          }
+        }
+      ])
     ]);
     
     // Get images for all reviews
@@ -449,13 +483,17 @@ const getProductDetails = async (req, res) => {
       totalReviews: 0 
     };
     
+    // Get total sold count
+    const soldCount = totalSold.length > 0 ? totalSold[0].totalSold : 0;
+    
     res.json({
       success: true,
       data: {
         product: {
           ...product.toObject(),
           images: productImages,
-          variations: variations || []
+          variations: variations || [],
+          sold: soldCount
         },
         reviews: {
           summary: {
@@ -734,12 +772,12 @@ const addProductVariation = async (req, res) => {
       });
     }
     
-    // Check if variation with same color and size already exists
-    const existingVariation = await ProductVariation.findOne({
-      product_id: productId,
-      color: color.trim(),
-      size: size.trim()
-    });
+    // Check if variation with same color and size already exists (active only)
+    const existingVariation = await ProductVariation.checkActiveVariationExists(
+      productId, 
+      color.trim(), 
+      size.trim()
+    );
     
     if (existingVariation) {
       return res.status(409).json({
@@ -748,9 +786,13 @@ const addProductVariation = async (req, res) => {
       });
     }
     
-    // Check for duplicate SKU if provided
+    // Check for duplicate SKU if provided (active variations only)
     if (sku) {
-      const existingSku = await ProductVariation.findOne({ sku: sku.trim() });
+      const existingSku = await ProductVariation.findOne({ 
+        sku: sku.trim(),
+        status: 'active',
+        deleted_at: null
+      });
       if (existingSku) {
         return res.status(409).json({
           success: false,
@@ -851,10 +893,12 @@ const editProductVariation = async (req, res) => {
       });
     }
     
-    // Find the variation
+    // Find the variation and ensure it's not soft-deleted
     const variation = await ProductVariation.findOne({
       _id: variationId,
-      product_id: productId
+      product_id: productId,
+      status: { $ne: 'deleted' },
+      deleted_at: null
     });
     
     if (!variation) {
@@ -864,7 +908,7 @@ const editProductVariation = async (req, res) => {
       });
     }
     
-    // Check for duplicate color/size combination if being updated
+    // Check for duplicate color/size combination if being updated (active variations only)
     if (updateData.color || updateData.size) {
       const newColor = updateData.color ? updateData.color.trim() : variation.color;
       const newSize = updateData.size ? updateData.size.trim() : variation.size;
@@ -873,7 +917,9 @@ const editProductVariation = async (req, res) => {
         product_id: productId,
         color: newColor,
         size: newSize,
-        _id: { $ne: variationId }
+        _id: { $ne: variationId },
+        status: 'active',
+        deleted_at: null
       });
       
       if (existingVariation) {
@@ -884,11 +930,13 @@ const editProductVariation = async (req, res) => {
       }
     }
     
-    // Check for duplicate SKU if being updated
+    // Check for duplicate SKU if being updated (active variations only)
     if (updateData.sku) {
       const existingSku = await ProductVariation.findOne({ 
         sku: updateData.sku.trim(),
-        _id: { $ne: variationId }
+        _id: { $ne: variationId },
+        status: 'active',
+        deleted_at: null
       });
       if (existingSku) {
         return res.status(409).json({
@@ -965,10 +1013,12 @@ const deleteProductVariation = async (req, res) => {
       });
     }
     
-    // Find and delete the variation
-    const variation = await ProductVariation.findOneAndDelete({
+    // Find the variation and ensure it's not already soft-deleted
+    const variation = await ProductVariation.findOne({
       _id: variationId,
-      product_id: productId
+      product_id: productId,
+      status: { $ne: 'deleted' },
+      deleted_at: null
     });
     
     if (!variation) {
@@ -977,6 +1027,11 @@ const deleteProductVariation = async (req, res) => {
         message: 'Product variation not found'
       });
     }
+    
+    // Soft delete by setting deleted_at and status
+    variation.deleted_at = new Date();
+    variation.status = 'deleted';
+    await variation.save({ validateBeforeSave: false });
     
     res.json({
       success: true,
@@ -1127,12 +1182,24 @@ const searchProducts = async (req, res) => {
         }
       },
       
-      // Stage 3: Lookup variations for color/size filtering
+      // Stage 3: Lookup variations for color/size filtering (active variations only)
       {
         $lookup: {
           from: 'productvariations',
-          localField: '_id',
-          foreignField: 'product_id',
+          let: { productId: '$_id' },
+          pipeline: [
+            { 
+              $match: { 
+                $expr: { 
+                  $and: [
+                    { $eq: ['$product_id', '$$productId'] },
+                    { $eq: ['$status', 'active'] },
+                    { $eq: ['$deleted_at', null] }
+                  ]
+                }
+              }
+            }
+          ],
           as: 'variations'
         }
       },
@@ -1322,8 +1389,20 @@ const searchProducts = async (req, res) => {
       {
         $lookup: {
           from: 'productvariations',
-          localField: '_id',
-          foreignField: 'product_id',
+          let: { productId: '$_id' },
+          pipeline: [
+            { 
+              $match: { 
+                $expr: { 
+                  $and: [
+                    { $eq: ['$product_id', '$$productId'] },
+                    { $eq: ['$status', 'active'] },
+                    { $eq: ['$deleted_at', null] }
+                  ]
+                }
+              }
+            }
+          ],
           as: 'variations'
         }
       },
@@ -1413,11 +1492,13 @@ const getUniqueVariationOptions = async (req, res) => {
       // Stage 2: Unwind product array
       { $unwind: '$product' },
       
-      // Stage 3: Match only variations from published, non-deleted products
+      // Stage 3: Match only variations from published, non-deleted products and active variations
       {
         $match: {
           'product.status': 'published',
           'product.deleted_at': null,
+          status: 'active',
+          deleted_at: null,
           ...baseFilter
         }
       },

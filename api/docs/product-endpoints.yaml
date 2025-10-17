@@ -538,6 +538,7 @@ paths:
                     final_price: 999.99
                     discount_amount: 0
                     in_stock: true
+                    sold: 125
                     low_stock: false
                     is_deleted: false
                     created_at: "2024-01-15T10:30:00.000Z"

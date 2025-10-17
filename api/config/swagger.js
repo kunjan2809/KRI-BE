@@ -18,6 +18,7 @@ const schemas = loadYamlFile(path.join(__dirname, '../docs/schemas.yaml'));
 const authEndpoints = loadYamlFile(path.join(__dirname, '../docs/auth-endpoints.yaml'));
 const orderEndpoints = loadYamlFile(path.join(__dirname, '../docs/order-endpoints.yaml'));
 const productEndpoints = loadYamlFile(path.join(__dirname, '../docs/product-endpoints.yaml'));
+const reviewEndpoints = loadYamlFile(path.join(__dirname, '../docs/review-endpoints.yaml'));
 const imageEndpoints = loadYamlFile(path.join(__dirname, '../docs/image-endpoints.yaml'));
 const userEndpoints = loadYamlFile(path.join(__dirname, '../docs/user-endpoints.yaml'));
 const analyticsEndpoints = loadYamlFile(path.join(__dirname, '../docs/analytics-endpoints.yaml'));
@@ -36,6 +37,7 @@ const swaggerSpec = {
              ...authEndpoints.components?.schemas,
              ...orderEndpoints.components?.schemas,
              ...productEndpoints.components?.schemas,
+             ...reviewEndpoints.components?.schemas,
              ...imageEndpoints.components?.schemas,
              ...userEndpoints.components?.schemas,
              ...analyticsEndpoints.components?.schemas,
@@ -49,6 +51,7 @@ const swaggerSpec = {
            ...authEndpoints.paths,
            ...orderEndpoints.paths,
            ...productEndpoints.paths,
+           ...reviewEndpoints.paths,
            ...imageEndpoints.paths,
            ...userEndpoints.paths,
            ...analyticsEndpoints.paths,
@@ -61,6 +64,7 @@ const swaggerSpec = {
            ...(authEndpoints.tags || []),
            ...(orderEndpoints.tags || []),
            ...(productEndpoints.tags || []),
+           ...(reviewEndpoints.tags || []),
            ...(imageEndpoints.tags || []),
            ...(userEndpoints.tags || []),
            ...(analyticsEndpoints.tags || []),
