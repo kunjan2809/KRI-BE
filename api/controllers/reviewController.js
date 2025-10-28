@@ -32,7 +32,7 @@ const getProductReviews = async (req, res) => {
 
         // Get all reviews for the product with user details
         const reviews = await ProductReview.find({ product_id: productId })
-            .populate('user_id', 'first_name last_name email')
+            .populate('user_id', 'first_name last_name email profile_icon')
             .populate('order_id', 'order_number')
             .sort({ created_at: -1 });
 
@@ -169,7 +169,7 @@ const createProductReview = async (req, res) => {
         await review.save();
 
         // Populate the review with user details
-        await review.populate('user_id', 'first_name last_name email');
+        await review.populate('user_id', 'first_name last_name email profile_icon');
 
         res.status(201).json({
             success: true,
@@ -251,7 +251,7 @@ const updateProductReview = async (req, res) => {
         await review.save();
 
         // Populate the review with user details
-        await review.populate('user_id', 'first_name last_name email');
+        await review.populate('user_id', 'first_name last_name email profile_icon');
 
         res.json({
             success: true,

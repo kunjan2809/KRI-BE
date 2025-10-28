@@ -1560,6 +1560,123 @@ const getUniqueVariationOptions = async (req, res) => {
   }
 };
 
+// 15. Get Product Suggestions (Public API)
+const getProductSuggestions = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    
+    // Validate productId
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product ID is required'
+      });
+    }
+    
+    // Find the product to get its category
+    const product = await Product.findOne({
+      _id: productId,
+      deleted_at: null,
+      status: 'published'
+    });
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    const categoryId = product.category_id;
+    
+    // Count available products in the same category (excluding the current product)
+    const availableProductsCount = await Product.countDocuments({
+      _id: { $ne: productId },
+      category_id: categoryId,
+      deleted_at: null,
+      status: 'published'
+    });
+    
+    // Check if there are any products available
+    if (availableProductsCount === 0) {
+      return res.json({
+        success: true,
+        data: {
+          product_id: productId,
+          category_id: categoryId,
+          suggestions: [],
+          total_suggestions: 0,
+          message: 'No similar products found in this category'
+        }
+      });
+    }
+    
+    // Get up to 4 random products from the same category (excluding the current product)
+    const limit = Math.min(4, availableProductsCount);
+    const suggestedProducts = await Product.aggregate([
+      {
+        $match: {
+          _id: { $ne: productId },
+          category_id: categoryId,
+          deleted_at: null,
+          status: 'published'
+        }
+      },
+      { $sample: { size: limit } } // MongoDB's random sampling
+    ]);
+    
+    // Get comprehensive data for suggested products
+    const productsWithFullData = await Promise.all(
+      suggestedProducts.map(async (suggestedProduct) => {
+        // Convert ObjectId to string for methods that expect string IDs
+        const suggestedProductId = suggestedProduct._id.toString();
+        
+        const [primaryImage, allImages, variations, reviewOverview] = await Promise.all([
+          ProductImage.getPrimaryImage(suggestedProductId),
+          ProductImage.getProductImages(suggestedProductId),
+          ProductVariation.getProductVariations(suggestedProductId),
+          ProductReview.getProductAverageRating(suggestedProductId)
+        ]);
+        
+        // Calculate review overview
+        const reviewData = reviewOverview.length > 0 ? reviewOverview[0] : { 
+          averageRating: 0, 
+          totalReviews: 0 
+        };
+        
+        return {
+          ...suggestedProduct,
+          primary_image: primaryImage || null,
+          all_images: allImages || [],
+          variations: variations || [],
+          review_overview: {
+            average_rating: reviewData.averageRating || 0,
+            total_reviews: reviewData.totalReviews || 0
+          }
+        };
+      })
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        product_id: productId,
+        category_id: categoryId,
+        suggestions: productsWithFullData,
+        total_suggestions: productsWithFullData.length
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching product suggestions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product suggestions',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   addProduct,
@@ -1574,5 +1691,6 @@ module.exports = {
   deleteProductVariation,
   toggleFeaturedStatus,
   searchProducts,
-  getUniqueVariationOptions
+  getUniqueVariationOptions,
+  getProductSuggestions
 }; 

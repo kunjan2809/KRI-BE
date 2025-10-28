@@ -1199,6 +1199,204 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # Get Product Suggestions (Public API)
+  /api/products/suggestions/{productId}:
+    get:
+      tags:
+        - Products
+      summary: Get product suggestions
+      description: |
+        Get up to 4 random product suggestions from the same category as the specified product.
+        Returns products with their primary images, all images, variations, and review overviews.
+        Excludes the current product from suggestions. Returns published, non-deleted products only.
+        This is a public API that does not require authentication.
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to get suggestions for
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Product suggestions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      product_id:
+                        type: string
+                        description: ID of the product for which suggestions were requested
+                        example: "507f1f77bcf86cd799439011"
+                      category_id:
+                        type: string
+                        description: Category ID of the product
+                        example: "507f1f77bcf86cd799439012"
+                      suggestions:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Product'
+                            - type: object
+                              properties:
+                                primary_image:
+                                  $ref: '#/components/schemas/ProductImage'
+                                  nullable: true
+                                  description: Primary image for the product
+                                all_images:
+                                  type: array
+                                  items:
+                                    $ref: '#/components/schemas/ProductImage'
+                                  description: All images for the product
+                                variations:
+                                  type: array
+                                  items:
+                                    $ref: '#/components/schemas/ProductVariation'
+                                  description: Product variations
+                                review_overview:
+                                  type: object
+                                  properties:
+                                    average_rating:
+                                      type: number
+                                      example: 4.5
+                                    total_reviews:
+                                      type: integer
+                                      example: 23
+                                  description: Review summary information
+                        maxItems: 4
+                      total_suggestions:
+                        type: integer
+                        description: Number of suggestions returned (0-4)
+                        example: 4
+              example:
+                success: true
+                data:
+                  product_id: "507f1f77bcf86cd799439011"
+                  category_id: "507f1f77bcf86cd799439012"
+                  suggestions:
+                    - _id: "507f1f77bcf86cd799439020"
+                      name: "Samsung Galaxy S24 Ultra"
+                      sku: "GALS24ULTRA-256GB"
+                      description: "Latest Galaxy with advanced features"
+                      product_description: "<p>Latest Galaxy with <strong>advanced features</strong></p>"
+                      price: 1099.99
+                      mrp: 1199.99
+                      discount_type: "percentage"
+                      discount_rate: 8.33
+                      stock_quantity: 50
+                      weight: 0.229
+                      status: "published"
+                      category_id: "507f1f77bcf86cd799439012"
+                      deleted_at: null
+                      featured: false
+                      final_price: 1008.32
+                      discount_amount: 91.67
+                      in_stock: true
+                      low_stock: false
+                      is_deleted: false
+                      created_at: "2024-01-14T10:00:00.000Z"
+                      edited_at: "2024-01-14T10:00:00.000Z"
+                      primary_image:
+                        _id: "507f1f77bcf86cd799439021"
+                        product_id: "507f1f77bcf86cd799439020"
+                        image_url: "/images/products/galaxy-s24-ultra-1.jpg"
+                        alt_text: "Samsung Galaxy S24 Ultra"
+                        is_primary: true
+                        sort_order: 1
+                        created_at: "2024-01-14T10:00:00.000Z"
+                        edited_at: "2024-01-14T10:00:00.000Z"
+                      all_images:
+                        - _id: "507f1f77bcf86cd799439021"
+                          product_id: "507f1f77bcf86cd799439020"
+                          image_url: "/images/products/galaxy-s24-ultra-1.jpg"
+                          alt_text: "Samsung Galaxy S24 Ultra"
+                          is_primary: true
+                          sort_order: 1
+                          created_at: "2024-01-14T10:00:00.000Z"
+                          edited_at: "2024-01-14T10:00:00.000Z"
+                      variations: []
+                      review_overview:
+                        average_rating: 4.3
+                        total_reviews: 18
+                    - _id: "507f1f77bcf86cd799439022"
+                      name: "Google Pixel 8 Pro"
+                      sku: "PIXEL8PRO-256GB"
+                      description: "Pure Android experience with advanced AI"
+                      product_description: "<p>Pure Android experience with <strong>advanced AI</strong></p>"
+                      price: 899.99
+                      mrp: 999.99
+                      discount_type: "percentage"
+                      discount_rate: 10
+                      stock_quantity: 30
+                      weight: 0.213
+                      status: "published"
+                      category_id: "507f1f77bcf86cd799439012"
+                      deleted_at: null
+                      featured: true
+                      final_price: 809.99
+                      discount_amount: 90.00
+                      in_stock: false
+                      low_stock: true
+                      is_deleted: false
+                      created_at: "2024-01-13T15:00:00.000Z"
+                      edited_at: "2024-01-13T15:00:00.000Z"
+                      primary_image:
+                        _id: "507f1f77bcf86cd799439023"
+                        product_id: "507f1f77bcf86cd799439022"
+                        image_url: "/images/products/pixel-8-pro-1.jpg"
+                        alt_text: "Google Pixel 8 Pro"
+                        is_primary: true
+                        sort_order: 1
+                        created_at: "2024-01-13T15:00:00.000Z"
+                        edited_at: "2024-01-13T15:00:00.000Z"
+                      all_images:
+                        - _id: "507f1f77bcf86cd799439023"
+                          product_id: "507f1f77bcf86cd799439022"
+                          image_url: "/images/products/pixel-8-pro-1.jpg"
+                          alt_text: "Google Pixel 8 Pro"
+                          is_primary: true
+                          sort_order: 1
+                          created_at: "2024-01-13T15:00:00.000Z"
+                          edited_at: "2024-01-13T15:00:00.000Z"
+                      variations: []
+                      review_overview:
+                        average_rating: 4.7
+                        total_reviews: 42
+                  total_suggestions: 2
+        '400':
+          description: Bad request - Invalid product ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Product ID is required"
+        '404':
+          description: Product not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Product not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   # Toggle Featured Status (Admin only)
   /api/products/admin/featured/{productId}:
     put:

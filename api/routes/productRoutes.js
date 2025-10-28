@@ -7,6 +7,7 @@ const { auth, optionalAuth } = require('../middlewares/auth');
 router.get('/featured', optionalAuth, productController.getFeaturedProducts);
 router.get('/all', optionalAuth, productController.searchProducts);
 router.get('/variation-options', productController.getUniqueVariationOptions);
+router.get('/suggestions/:productId', productController.getProductSuggestions);
 
 // All other product routes require admin authentication
 router.use(auth('admin'));
