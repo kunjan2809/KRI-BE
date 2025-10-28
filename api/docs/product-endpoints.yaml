@@ -1241,6 +1241,10 @@ paths:
                         type: string
                         description: Category ID of the product
                         example: "507f1f77bcf86cd799439012"
+                      category_name:
+                        type: string
+                        description: Category name of the product
+                        example: "Electronics"
                       suggestions:
                         type: array
                         items:
@@ -1272,6 +1276,16 @@ paths:
                                       type: integer
                                       example: 23
                                   description: Review summary information
+                                category:
+                                  type: object
+                                  properties:
+                                    _id:
+                                      type: string
+                                      example: "507f1f77bcf86cd799439012"
+                                    name:
+                                      type: string
+                                      example: "Electronics"
+                                  description: Category information for the product
                         maxItems: 4
                       total_suggestions:
                         type: integer
@@ -1282,6 +1296,7 @@ paths:
                 data:
                   product_id: "507f1f77bcf86cd799439011"
                   category_id: "507f1f77bcf86cd799439012"
+                  category_name: "Electronics"
                   suggestions:
                     - _id: "507f1f77bcf86cd799439020"
                       name: "Samsung Galaxy S24 Ultra"
@@ -1298,6 +1313,9 @@ paths:
                       category_id: "507f1f77bcf86cd799439012"
                       deleted_at: null
                       featured: false
+                      category:
+                        _id: "507f1f77bcf86cd799439012"
+                        name: "Electronics"
                       final_price: 1008.32
                       discount_amount: 91.67
                       in_stock: true
@@ -1342,6 +1360,9 @@ paths:
                       category_id: "507f1f77bcf86cd799439012"
                       deleted_at: null
                       featured: true
+                      category:
+                        _id: "507f1f77bcf86cd799439012"
+                        name: "Electronics"
                       final_price: 809.99
                       discount_amount: 90.00
                       in_stock: false

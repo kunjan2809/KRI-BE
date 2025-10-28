@@ -1578,7 +1578,7 @@ const getProductSuggestions = async (req, res) => {
       _id: productId,
       deleted_at: null,
       status: 'published'
-    });
+    }).populate('category_id', 'name');
     
     if (!product) {
       return res.status(404).json({
@@ -1587,7 +1587,8 @@ const getProductSuggestions = async (req, res) => {
       });
     }
     
-    const categoryId = product.category_id;
+    const categoryId = product.category_id._id || product.category_id;
+    const categoryName = product.category_id.name || 'Unknown';
     
     // Count available products in the same category (excluding the current product)
     const availableProductsCount = await Product.countDocuments({
@@ -1604,6 +1605,7 @@ const getProductSuggestions = async (req, res) => {
         data: {
           product_id: productId,
           category_id: categoryId,
+          category_name: categoryName,
           suggestions: [],
           total_suggestions: 0,
           message: 'No similar products found in this category'
@@ -1622,7 +1624,22 @@ const getProductSuggestions = async (req, res) => {
           status: 'published'
         }
       },
-      { $sample: { size: limit } } // MongoDB's random sampling
+      { $sample: { size: limit } }, // MongoDB's random sampling
+      // Lookup category information
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'category_id',
+          foreignField: '_id',
+          as: 'category'
+        }
+      },
+      {
+        $unwind: {
+          path: '$category',
+          preserveNullAndEmptyArrays: true
+        }
+      }
     ]);
     
     // Get comprehensive data for suggested products
@@ -1652,7 +1669,8 @@ const getProductSuggestions = async (req, res) => {
           review_overview: {
             average_rating: reviewData.averageRating || 0,
             total_reviews: reviewData.totalReviews || 0
-          }
+          },
+          category: suggestedProduct.category || null
         };
       })
     );
@@ -1662,6 +1680,7 @@ const getProductSuggestions = async (req, res) => {
       data: {
         product_id: productId,
         category_id: categoryId,
+        category_name: categoryName,
         suggestions: productsWithFullData,
         total_suggestions: productsWithFullData.length
       }
