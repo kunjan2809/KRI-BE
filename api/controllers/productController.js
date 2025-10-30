@@ -617,9 +617,9 @@ const getFeaturedProducts = async (req, res) => {
     const limit = 12; // Always return 12 products
     const { include_wishlist_status = false } = req.query;
     
-    // Check if user is authenticated and wishlist status is requested
+    // Include wishlist status automatically when user is authenticated
     const userId = req.user?._id;
-    const shouldIncludeWishlist = include_wishlist_status === 'true' && userId;
+    const shouldIncludeWishlist = !!userId;
     
     // First, try to get featured products
     let products = await Product.find({
@@ -1643,17 +1643,28 @@ const getProductSuggestions = async (req, res) => {
     ]);
     
     // Get comprehensive data for suggested products
+    const userId = req.user?._id;
     const productsWithFullData = await Promise.all(
       suggestedProducts.map(async (suggestedProduct) => {
         // Convert ObjectId to string for methods that expect string IDs
         const suggestedProductId = suggestedProduct._id.toString();
         
-        const [primaryImage, allImages, variations, reviewOverview] = await Promise.all([
+        const lookups = [
           ProductImage.getPrimaryImage(suggestedProductId),
           ProductImage.getProductImages(suggestedProductId),
           ProductVariation.getProductVariations(suggestedProductId),
           ProductReview.getProductAverageRating(suggestedProductId)
-        ]);
+        ];
+        // If authenticated, also fetch wishlist status
+        if (userId) {
+          const Wishlist = require('../models/Wishlist');
+          lookups.push(
+            Wishlist.findOne({ user_id: userId, product_id: suggestedProductId })
+          );
+        }
+
+        const results = await Promise.all(lookups);
+        const [primaryImage, allImages, variations, reviewOverview, wishlistItem] = results;
         
         // Calculate review overview
         const reviewData = reviewOverview.length > 0 ? reviewOverview[0] : { 
@@ -1670,7 +1681,8 @@ const getProductSuggestions = async (req, res) => {
             average_rating: reviewData.averageRating || 0,
             total_reviews: reviewData.totalReviews || 0
           },
-          category: suggestedProduct.category || null
+          category: suggestedProduct.category || null,
+          ...(userId ? { is_in_wishlist: !!wishlistItem } : {})
         };
       })
     );

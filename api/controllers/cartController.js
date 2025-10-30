@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const ProductVariation = require('../models/ProductVariation');
 const ProductImage = require('../models/ProductImage');
 const ProductReview = require('../models/ProductReview');
+const Wishlist = require('../models/Wishlist');
 
 // 1. Get Cart Items
 const getCartItems = async (req, res) => {
@@ -33,12 +34,19 @@ const getCartItems = async (req, res) => {
         }
 
         // Get comprehensive product data (same as productController)
-        const [primaryImage, allImages, variations, reviewOverview] = await Promise.all([
+        const lookups = [
           ProductImage.getPrimaryImage(product._id),
           ProductImage.getProductImages(product._id),
           ProductVariation.getProductVariations(product._id),
           ProductReview.getProductAverageRating(product._id)
-        ]);
+        ];
+        // Also fetch wishlist status for the logged-in user
+        lookups.push(
+          Wishlist.findOne({ user_id: userId, product_id: product._id })
+        );
+
+        const results = await Promise.all(lookups);
+        const [primaryImage, allImages, variations, reviewOverview, wishlistItem] = results;
 
         // Calculate review overview
         const reviewData = reviewOverview.length > 0 ? reviewOverview[0] : { 
@@ -94,6 +102,7 @@ const getCartItems = async (req, res) => {
               average_rating: reviewData.averageRating || 0,
               total_reviews: reviewData.totalReviews || 0
             },
+          is_in_wishlist: !!wishlistItem,
             created_at: product.created_at,
             edited_at: product.edited_at
           },

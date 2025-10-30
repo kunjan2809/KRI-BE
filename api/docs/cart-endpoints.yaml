@@ -505,6 +505,10 @@ components:
               type: integer
               description: Total number of reviews
               example: 25
+        is_in_wishlist:
+          type: boolean
+          description: Whether this product is in the user's wishlist
+          example: true
         created_at:
           type: string
           format: date-time
