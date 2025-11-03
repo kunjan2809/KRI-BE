@@ -1140,13 +1140,11 @@ const searchProducts = async (req, res) => {
       page = 1,
       limit = 20,
       
-      // Wishlist integration
-      include_wishlist_status = false
     } = req.query;
 
-    // Check if user is authenticated and wishlist status is requested
+    // Check if user is authenticated - always include wishlist status for authenticated users
     const userId = req.user?._id;
-    const shouldIncludeWishlist = include_wishlist_status === 'true' && userId;
+    const shouldIncludeWishlist = !!userId;
 
     const skip = (page - 1) * limit;
     
@@ -1215,11 +1213,14 @@ const searchProducts = async (req, res) => {
         }
       },
       
-      // Stage 4.5: Lookup wishlist status if user is authenticated and requested
+      // Stage 4.5: Lookup wishlist status if user is authenticated
       ...(shouldIncludeWishlist ? [{
         $lookup: {
           from: 'wishlists',
-          let: { productId: '$_id', userId: userId },
+          let: { 
+            productId: '$_id', 
+            userId: userId instanceof mongoose.Types.ObjectId ? userId : new mongoose.Types.ObjectId(userId.toString())
+          },
           pipeline: [
             { 
               $match: { 
@@ -1788,7 +1789,6 @@ const getProductSuggestions = async (req, res) => {
         ];
         // If authenticated, also fetch wishlist status
         if (userId) {
-          const Wishlist = require('../models/Wishlist');
           lookups.push(
             Wishlist.findOne({ user_id: userId, product_id: suggestedProductId })
           );
