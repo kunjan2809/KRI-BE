@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const ProductImage = require('../models/ProductImage');
 const Category = require('../models/Category');
@@ -1560,6 +1561,136 @@ const getUniqueVariationOptions = async (req, res) => {
   }
 };
 
+// 14.5. Get Public Product Details (Public API)
+const getPublicProductDetails = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user?._id; // Optional authentication for wishlist status
+    
+    // Find product - only published and not deleted for public access
+    const product = await Product.findOne({ 
+      _id: productId, 
+      deleted_at: null, 
+      status: 'published'
+    }).populate('category_id', 'name');
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found or not available'
+      });
+    }
+    
+    // Get comprehensive product data
+    const promises = [
+      ProductImage.getProductImages(productId),
+      ProductVariation.getProductVariations(productId),
+      ProductReview.getProductAverageRating(productId),
+      // Get reviews with user details (including profile_icon)
+      ProductReview.find({ product_id: productId })
+        .populate('user_id', 'first_name last_name email profile_icon')
+        .populate('order_id', 'order_number')
+        .sort({ created_at: -1 })
+        .limit(50),
+      // Get total sold count for this product
+      OrderItem.aggregate([
+        {
+          $lookup: {
+            from: 'orders',
+            localField: 'order_id',
+            foreignField: '_id',
+            as: 'order'
+          }
+        },
+        {
+          $unwind: '$order'
+        },
+        {
+          $match: {
+            product_id: new mongoose.Types.ObjectId(productId),
+            'order.order_status': 'delivered'
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalSold: { $sum: '$quantity' }
+          }
+        }
+      ])
+    ];
+
+    // Add wishlist check if user is authenticated
+    if (userId) {
+      promises.push(
+        Wishlist.findOne({ user_id: userId, product_id: productId })
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const productImages = results[0];
+    const variations = results[1];
+    const reviewSummary = results[2];
+    const reviewDetails = results[3];
+    const totalSold = results[4];
+    const wishlistItem = userId ? results[5] : null;
+    
+    // Get images for all reviews
+    const reviewIds = reviewDetails.map(review => review._id);
+    const reviewImages = await ReviewImage.getReviewsImages(reviewIds);
+    
+    // Attach images to reviews
+    const reviewsWithImages = reviewDetails.map(review => ({
+      ...review.toObject(),
+      images: reviewImages.filter(img => img.review_id.toString() === review._id.toString())
+    }));
+    
+    // Prepare comprehensive review data
+    const reviewData = reviewSummary.length > 0 ? reviewSummary[0] : { 
+      averageRating: 0, 
+      totalReviews: 0 
+    };
+    
+    // Get total sold count
+    const soldCount = totalSold.length > 0 ? totalSold[0].totalSold : 0;
+    
+    // Build product response
+    const productResponse = {
+      ...product.toObject(),
+      images: productImages,
+      variations: variations || [],
+      sold: soldCount
+    };
+
+    // Add wishlist status if user is authenticated
+    if (userId) {
+      productResponse.is_in_wishlist = !!wishlistItem;
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        product: productResponse,
+        reviews: {
+          summary: {
+            average_rating: reviewData.averageRating || 0,
+            total_reviews: reviewData.totalReviews || 0
+          },
+          details: reviewsWithImages
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching product details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product details',
+      error: error.message
+    });
+  }
+};
+
 // 15. Get Product Suggestions (Public API)
 const getProductSuggestions = async (req, res) => {
   try {
@@ -1723,5 +1854,6 @@ module.exports = {
   toggleFeaturedStatus,
   searchProducts,
   getUniqueVariationOptions,
-  getProductSuggestions
+  getProductSuggestions,
+  getPublicProductDetails
 }; 

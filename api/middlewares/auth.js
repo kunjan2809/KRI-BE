@@ -100,6 +100,8 @@ const optionalAuth = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
+    console.log('token', token);
+    console.log('authHeader', authHeader);
     if (!token) {
       // No token provided, continue without user
       req.user = null;

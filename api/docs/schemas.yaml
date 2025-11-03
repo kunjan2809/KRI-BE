@@ -1174,6 +1174,10 @@ ProductWithImages:
       description: Total quantity sold (from delivered orders only)
       minimum: 0
       example: 125
+    is_in_wishlist:
+      type: boolean
+      description: Whether the product is in the user's wishlist (only included when user is authenticated)
+      example: false
 
 # Product with Primary Image Schema
 ProductWithPrimaryImage:
