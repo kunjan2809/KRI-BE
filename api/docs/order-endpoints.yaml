@@ -1,118 +1,64 @@
-# Order Endpoints for E-Commerce API
-# This file contains order management endpoints
-
 openapi: 3.0.0
 info:
-  title: E-Commerce Order Endpoints
+  title: Order API
+  description: Order management and return request endpoints for e-commerce application
   version: 1.0.0
-  description: Order management endpoints for creating orders, viewing order history, and admin order management
-
-components:
-  schemas:
-    # Reference schemas from the main schemas file
-    User:
-      $ref: './schemas.yaml#/User'
-    ShippingAddress:
-      $ref: './schemas.yaml#/ShippingAddress'
-    Order:
-      $ref: './schemas.yaml#/Order'
-    OrderItem:
-      $ref: './schemas.yaml#/OrderItem'
-    Delivery:
-      $ref: './schemas.yaml#/Delivery'
-    ErrorResponse:
-      $ref: './schemas.yaml#/ErrorResponse'
-    SuccessResponse:
-      $ref: './schemas.yaml#/SuccessResponse'
-
 tags:
   - name: Orders
-    description: Order management and tracking endpoints
-
+    description: Order management operations
+  - name: Return Requests
+    description: Return request management operations
 paths:
-  # ========================================
-  # ORDER ENDPOINTS
-  # ========================================
-
-  /api/orders/create:
+  /api/orders/place:
     post:
-      summary: Create a new order (Public)
-      description: Create a new order as draft. No authentication required. Customer info is collected and user is created if doesn't exist. Returns complete order with populated shipping address and product details.
-      tags: [Orders]
+      tags:
+        - Orders
+      summary: Place order from cart
+      description: Create a new order from cart items. Stock is reduced, cart items are cleared, and order number is auto-generated.
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - cart_item_ids
+                - shipping_address_id
               properties:
-                customer_info:
-                  type: object
-                  properties:
-                    first_name:
-                      type: string
-                      description: Customer's first name
-                      example: "John"
-                    last_name:
-                      type: string
-                      description: Customer's last name
-                      example: "Doe"
-                    email:
-                      type: string
-                      format: email
-                      description: Customer's email address
-                      example: "john.doe@example.com"
-                    mobile_number:
-                      type: string
-                      description: Customer's mobile number
-                      example: "+1234567890"
-                  required:
-                    - first_name
-                    - last_name
-                    - email
-                    - mobile_number
-                shipping_address_id:
-                  type: string
-                  description: ID of the shipping address
-                  example: "507f1f77bcf86cd799439011"
-                products:
+                cart_item_ids:
                   type: array
                   items:
-                    type: object
-                    properties:
-                      product_id:
-                        type: string
-                        description: Product ID to order
-                        example: "507f1f77bcf86cd799439011"
-                      quantity:
-                        type: integer
-                        minimum: 1
-                        description: Quantity of the product
-                        example: 2
-                  minItems: 1
-                  description: Array of products with quantities
-              required:
-                - customer_info
-                - shipping_address_id
-                - products
-            examples:
-              example1:
-                summary: Basic order creation
-                value:
-                  customer_info:
-                    first_name: "John"
-                    last_name: "Doe"
-                    email: "john.doe@example.com"
-                    mobile_number: "+1234567890"
-                  shipping_address_id: "507f1f77bcf86cd799439011"
-                  products:
-                    - product_id: "507f1f77bcf86cd799439011"
-                      quantity: 2
-                    - product_id: "507f1f77bcf86cd799439012"
-                      quantity: 1
+                    type: string
+                    format: objectid
+                  description: Array of cart item IDs to place order for
+                  example: ["64f1a2b3c4d5e6f7a8b9c0d1", "64f1a2b3c4d5e6f7a8b9c0d2"]
+                shipping_address_id:
+                  type: string
+                  format: objectid
+                  description: Shipping address ID (must belong to the user)
+                  example: "64f1a2b3c4d5e6f7a8b9c0d3"
+                payment_method:
+                  type: string
+                  enum: [cod, paid, unpaid]
+                  default: cod
+                  description: Payment method
+                  example: "cod"
+                discount_type:
+                  type: string
+                  enum: [price, percentage, null]
+                  description: Order-level discount type (optional)
+                  example: "percentage"
+                discount_rate:
+                  type: number
+                  format: float
+                  minimum: 0
+                  description: Order-level discount rate (required if discount_type is provided)
+                  example: 10
       responses:
         '201':
-          description: Order created successfully as draft
+          description: Order placed successfully
           content:
             application/json:
               schema:
@@ -123,7 +69,7 @@ paths:
                     example: true
                   message:
                     type: string
-                    example: "Order created successfully as draft"
+                    example: "Order placed successfully"
                   data:
                     type: object
                     properties:
@@ -134,7 +80,7 @@ paths:
                         items:
                           $ref: '#/components/schemas/OrderItem'
         '400':
-          description: Bad request - validation error
+          description: Bad request - validation error, insufficient stock, or invalid data
           content:
             application/json:
               schema:
@@ -144,179 +90,63 @@ paths:
                   summary: Missing required fields
                   value:
                     success: false
-                    message: "Customer info, shipping address, and products are required"
+                    message: "Cart item IDs are required and must be a non-empty array"
                 insufficientStock:
                   summary: Insufficient stock
                   value:
                     success: false
-                    message: "Insufficient stock for product Product Name. Available: 5, Requested: 10"
-        '500':
-          description: Internal server error
+                    message: "Insufficient stock for Product Name. Available: 5, Requested: 10"
+                invalidPaymentMethod:
+                  summary: Invalid payment method
+                  value:
+                    success: false
+                    message: "Payment method must be one of: cod, paid, unpaid"
+        '404':
+          description: Shipping address or cart items not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  /api/orders/user-orders:
-    get:
-      summary: Get user order history (Authenticated)
-      description: Retrieve all orders for the authenticated user. Requires valid JWT token. Returns complete order details including populated shipping address, product information, and delivery details (if available).
-      tags: [Orders]
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          description: Page number for pagination
-          required: false
-          schema:
-            type: integer
-            default: 1
-            minimum: 1
-          example: 1
-        - name: limit
-          in: query
-          description: Number of orders per page
-          required: false
-          schema:
-            type: integer
-            default: 10
-            minimum: 1
-            maximum: 100
-          example: 10
-      responses:
-        '200':
-          description: User orders retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: object
-                    properties:
-                      orders:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Order'
-                      pagination:
-                        type: object
-                        properties:
-                          current_page:
-                            type: integer
-                            example: 1
-                          total_pages:
-                            type: integer
-                            example: 5
-                          total_orders:
-                            type: integer
-                            example: 50
-                          limit:
-                            type: integer
-                            example: 10
         '401':
-          description: Unauthorized - missing or invalid JWT token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/Unauthorized'
         '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/InternalServerError'
 
-  /api/orders/admin/all:
+  /api/orders:
     get:
-      summary: Get all orders (Admin only)
-      description: Retrieve all orders with advanced filtering, pagination, and search. Admin access required. Returns complete order details including customer info, shipping address, product details, and delivery information (if available).
-      tags: [Orders]
+      tags:
+        - Orders
+      summary: Get all orders for user
+      description: Retrieve all orders for the authenticated user with pagination and optional status filter
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: page
           in: query
-          description: Page number for pagination
-          required: false
           schema:
             type: integer
-            default: 1
             minimum: 1
+            default: 1
+          description: Page number for pagination
           example: 1
         - name: limit
           in: query
-          description: Number of orders per page
-          required: false
           schema:
             type: integer
-            default: 20
             minimum: 1
-            maximum: 100
-          example: 20
+            default: 10
+          description: Number of orders per page
+          example: 10
         - name: status
           in: query
-          description: Filter by order status
-          required: false
           schema:
             type: string
-            enum: ['pending', 'shipped', 'cancelled', 'delivered', 'return']
+            enum: [pending, shipped, cancelled, delivered, return]
+          description: Filter orders by status
           example: "pending"
-        - name: payment_status
-          in: query
-          description: Filter by payment status
-          required: false
-          schema:
-            type: string
-            enum: ['paid', 'cod', 'unpaid', 'refunded']
-          example: "unpaid"
-        - name: start_date
-          in: query
-          description: Filter orders from this date (YYYY-MM-DD)
-          required: false
-          schema:
-            type: string
-            format: date
-          example: "2024-01-01"
-        - name: end_date
-          in: query
-          description: Filter orders until this date (YYYY-MM-DD)
-          required: false
-          schema:
-            type: string
-            format: date
-          example: "2024-12-31"
-        - name: search
-          in: query
-          description: Search by order ID, customer name, or address
-          required: false
-          schema:
-            type: string
-          example: "john"
-        - name: sort_by
-          in: query
-          description: Field to sort by
-          required: false
-          schema:
-            type: string
-            enum: ['created_at', 'total_amount', 'order_status']
-            default: "created_at"
-          example: "created_at"
-        - name: sort_order
-          in: query
-          description: Sort order
-          required: false
-          schema:
-            type: string
-            enum: ['asc', 'desc']
-            default: "desc"
-          example: "desc"
       responses:
         '200':
-          description: All orders retrieved successfully
+          description: Orders retrieved successfully
           content:
             application/json:
               schema:
@@ -331,83 +161,95 @@ paths:
                       orders:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Order'
+                          allOf:
+                            - $ref: '#/components/schemas/Order'
+                            - type: object
+                              properties:
+                                order_items:
+                                  type: array
+                                  items:
+                                    $ref: '#/components/schemas/OrderItem'
                       pagination:
-                        type: object
-                        properties:
-                          current_page:
-                            type: integer
-                            example: 1
-                          total_pages:
-                            type: integer
-                            example: 10
-                          total_orders:
-                            type: integer
-                            example: 200
-                          limit:
-                            type: integer
-                            example: 20
-                      filters:
-                        type: object
-                        properties:
-                          status:
-                            type: string
-                            example: "pending"
-                          payment_status:
-                            type: string
-                            example: "unpaid"
-                          start_date:
-                            type: string
-                            example: "2024-01-01"
-                          end_date:
-                            type: string
-                            example: "2024-12-31"
-                          search:
-                            type: string
-                            example: "john"
-                      sorting:
-                        type: object
-                        properties:
-                          sort_by:
-                            type: string
-                            example: "created_at"
-                          sort_order:
-                            type: string
-                            example: "desc"
+                        $ref: '#/components/schemas/Pagination'
         '401':
-          description: Unauthorized - missing or invalid JWT token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Forbidden - admin access required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/Unauthorized'
         '500':
-          description: Internal server error
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders/returns:
+    get:
+      tags:
+        - Return Requests
+      summary: Get user return requests
+      description: Retrieve all return requests for the authenticated user with pagination and optional status filter
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+          description: Number of return requests per page
+          example: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [requested, approved, rejected, picked-up, cancelled]
+          description: Filter return requests by status
+          example: "requested"
+      responses:
+        '200':
+          description: Return requests retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      return_requests:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ReturnRequest'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /api/orders/admin/details/{orderId}:
+  /api/orders/{orderId}:
     get:
-      summary: Get complete order details (Admin only)
-      description: Retrieve complete order details by order ID. Admin access required. Returns all order information, user data, shipping address, order items with product details, and delivery information.
-      tags: [Orders]
+      tags:
+        - Orders
+      summary: Get order details
+      description: Retrieve detailed information about a specific order (must belong to the authenticated user)
       security:
-        - BearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: orderId
           in: path
-          description: Order ID to fetch details for
           required: true
           schema:
             type: string
-          example: "507f1f77bcf86cd799439011"
+            format: objectid
+          description: Order ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
       responses:
         '200':
           description: Order details retrieved successfully
@@ -423,63 +265,13 @@ paths:
                     type: object
                     properties:
                       order:
-                        type: object
-                        properties:
-                          _id:
-                            type: string
-                            example: "507f1f77bcf86cd799439011"
-                          order_status:
-                            type: string
-                            example: "pending"
-                          delivered_at:
-                            type: string
-                            format: date-time
-                            example: null
-                          payment_status:
-                            type: string
-                            example: "unpaid"
-                          discount_type:
-                            type: string
-                            example: null
-                          discount_rate:
-                            type: number
-                            example: 0
-                          total_amount:
-                            type: number
-                            example: 299.99
-                          created_at:
-                            type: string
-                            format: date-time
-                            example: "2024-01-15T10:30:00.000Z"
-                      user:
-                        $ref: '#/components/schemas/User'
-                      shipping_address:
-                        $ref: '#/components/schemas/ShippingAddress'
+                        $ref: '#/components/schemas/Order'
                       order_items:
                         type: array
                         items:
                           $ref: '#/components/schemas/OrderItem'
-                      delivery:
-                        type: object
-                        nullable: true
-                        properties:
-                          delivery_by:
-                            type: string
-                            example: "FedEx"
-                          speed:
-                            type: string
-                            example: "express"
-                          tracking_number:
-                            type: string
-                            example: "1Z999AA10123456784"
-        '401':
-          description: Unauthorized - missing or invalid JWT token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Forbidden - admin access required
+        '400':
+          description: Invalid order ID
           content:
             application/json:
               schema:
@@ -490,79 +282,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/InternalServerError'
 
-  /api/orders/admin/delivery:
-    post:
-      summary: Create or Update Delivery (Admin only)
-      description: Create a new delivery record or update an existing one. If delivery_id is provided, updates the existing record. If not provided, creates a new record. No duplicate tracking number validation is performed.
-      tags: [Orders]
+  /api/orders/{orderId}/cancel:
+    patch:
+      tags:
+        - Orders
+      summary: Cancel order
+      description: Cancel a pending order. Stock quantities are restored automatically. Only pending orders can be cancelled by users.
       security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                delivery_id:
-                  type: string
-                  description: Delivery ID to update (optional - if not provided, creates new record)
-                  example: "507f1f77bcf86cd799439011"
-                order_id:
-                  type: string
-                  description: Order ID this delivery belongs to
-                  example: "507f1f77bcf86cd799439011"
-                shipping_address_id:
-                  type: string
-                  description: Shipping address ID for delivery
-                  example: "507f1f77bcf86cd799439011"
-                delivery_by:
-                  type: string
-                  description: Shipping company name
-                  example: "FedEx"
-                speed:
-                  type: string
-                  enum: ['standard', 'normal', 'express', 'overnight', 'same_day', 'economy']
-                  description: Delivery speed option
-                  example: "express"
-                tracking_number:
-                  type: string
-                  description: Parcel tracking number
-                  example: "1Z999AA10123456784"
-              required:
-                - order_id
-                - shipping_address_id
-                - delivery_by
-                - speed
-                - tracking_number
-            examples:
-              createNew:
-                summary: Create new delivery record
-                value:
-                  order_id: "507f1f77bcf86cd799439011"
-                  shipping_address_id: "507f1f77bcf86cd799439011"
-                  delivery_by: "FedEx"
-                  speed: "express"
-                  tracking_number: "1Z999AA10123456784"
-              updateExisting:
-                summary: Update existing delivery record
-                value:
-                  delivery_id: "507f1f77bcf86cd799439011"
-                  order_id: "507f1f77bcf86cd799439011"
-                  shipping_address_id: "507f1f77bcf86cd799439011"
-                  delivery_by: "UPS"
-                  speed: "overnight"
-                  tracking_number: "1Z999AA10123456785"
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Order ID to cancel
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
       responses:
         '200':
-          description: Delivery created or updated successfully
+          description: Order cancelled successfully
           content:
             application/json:
               schema:
@@ -573,14 +317,101 @@ paths:
                     example: true
                   message:
                     type: string
-                    example: "Delivery created successfully"
+                    example: "Order cancelled successfully"
                   data:
                     type: object
                     properties:
-                      delivery:
-                        $ref: '#/components/schemas/Delivery'
+                      order:
+                        $ref: '#/components/schemas/Order'
         '400':
-          description: Bad request - validation error
+          description: Order cannot be cancelled (not pending status)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Order cannot be cancelled. Current status: shipped. Only pending orders can be cancelled."
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders/{orderId}/return:
+    post:
+      tags:
+        - Return Requests
+      summary: Create return request
+      description: Create a return request for a delivered order item. Order status is updated to 'return'.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Order ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order_item_id
+                - reason
+              properties:
+                order_item_id:
+                  type: string
+                  format: objectid
+                  description: Order item ID to return
+                  example: "64f1a2b3c4d5e6f7a8b9c0d2"
+                reason:
+                  type: string
+                  maxLength: 1000
+                  description: Detailed reason for return
+                  example: "Product arrived damaged and does not match description"
+                return_type:
+                  type: string
+                  enum: [Damaged, 'Wrong item', 'Size issue', 'Quality issue', 'Not as described', 'Received late', 'Changed mind', Other]
+                  default: Other
+                  description: Type of return
+                  example: "Damaged"
+                notes:
+                  type: string
+                  maxLength: 500
+                  description: Additional notes (optional)
+                  example: "The packaging was torn and product was scratched"
+      responses:
+        '201':
+          description: Return request created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Return request created successfully"
+                  data:
+                    type: object
+                    properties:
+                      return_request:
+                        $ref: '#/components/schemas/ReturnRequest'
+        '400':
+          description: Bad request - validation error, order not delivered, or duplicate return request
           content:
             application/json:
               schema:
@@ -590,38 +421,870 @@ paths:
                   summary: Missing required fields
                   value:
                     success: false
-                    message: "Order ID, shipping address ID, delivery company, speed, and tracking number are required"
-                orderNotFound:
-                  summary: Order not found
+                    message: "Order ID, order item ID, and reason are required"
+                notDelivered:
+                  summary: Order not delivered
                   value:
                     success: false
-                    message: "Order not found"
-                addressNotFound:
-                  summary: Shipping address not found
+                    message: "Return can only be requested for delivered orders"
+                duplicateReturn:
+                  summary: Duplicate return request
                   value:
                     success: false
-                    message: "Shipping address not found"
-        '401':
-          description: Unauthorized - missing or invalid JWT token
+                    message: "A return request already exists for this order item"
+        '404':
+          description: Order or order item not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders/admin/all:
+    get:
+      tags:
+        - Orders
+      summary: Get all orders (Admin only)
+      description: Retrieve all orders from all users with advanced filtering, sorting, pagination, and search capabilities. Admin access required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: Number of orders per page
+          example: 20
+        - name: order_status
+          in: query
+          schema:
+            type: string
+            enum: [pending, shipped, cancelled, delivered, return]
+          description: Filter orders by status
+          example: "pending"
+        - name: payment_status
+          in: query
+          schema:
+            type: string
+            enum: [paid, cod, unpaid, refunded]
+          description: Filter orders by payment status
+          example: "paid"
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by order number, user name, user email, or user ID (ObjectId)
+          example: "ORD-2024"
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, total_amount, order_status, payment_status, order_number]
+            default: created_at
+          description: Field to sort by
+          example: "created_at"
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order (ascending or descending)
+          example: "desc"
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      orders:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Order'
+                            - type: object
+                              properties:
+                                user_id:
+                                  oneOf:
+                                    - type: string
+                                      format: objectid
+                                    - $ref: '#/components/schemas/UserBasic'
+                                  description: User ID or populated user details
+                                order_items:
+                                  type: array
+                                  items:
+                                    $ref: '#/components/schemas/OrderItem'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+                      filters:
+                        type: object
+                        properties:
+                          order_status:
+                            type: string
+                            nullable: true
+                            example: "pending"
+                          payment_status:
+                            type: string
+                            nullable: true
+                            example: "paid"
+                          search:
+                            type: string
+                            nullable: true
+                            example: "ORD-2024"
+                      sorting:
+                        type: object
+                        properties:
+                          sort_by:
+                            type: string
+                            example: "created_at"
+                          sort_order:
+                            type: string
+                            example: "desc"
+              example:
+                success: true
+                data:
+                  orders:
+                    - _id: "64f1a2b3c4d5e6f7a8b9c0d1"
+                      user_id:
+                        _id: "64f1a2b3c4d5e6f7a8b9c0d0"
+                        first_name: "John"
+                        last_name: "Doe"
+                        email: "john.doe@example.com"
+                        mobile_number: "+1234567890"
+                      shipping_address_id:
+                        full_name: "John Doe"
+                        formatted_address: "123 Main St, New York, NY 10001"
+                      order_number: "ORD-2024-00001"
+                      order_status: "pending"
+                      payment_status: "cod"
+                      total_amount: 299.97
+                      order_items:
+                        - _id: "64f1a2b3c4d5e6f7a8b9c0d2"
+                          product_name_snapshot: "iPhone 15 Pro"
+                          quantity: 1
+                          price: 299.97
+                  pagination:
+                    current_page: 1
+                    total_pages: 5
+                    total_orders: 100
+                    limit: 20
+                  filters:
+                    order_status: "pending"
+                    payment_status: null
+                    search: null
+                  sorting:
+                    sort_by: "created_at"
+                    sort_order: "desc"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          description: Forbidden - admin access required
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  code:
+                    type: string
+                    example: "ADMIN_ACCESS_REQUIRED"
+                  message:
+                    type: string
+                    example: "Admin access required"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders/admin/{orderId}:
+    get:
+      tags:
+        - Orders
+      summary: Get order details by ID (Admin only)
+      description: Retrieve detailed information about any order by ID. Admin can view orders from all users. Admin access required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Order ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+      responses:
+        '200':
+          description: Order details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      order:
+                        allOf:
+                          - $ref: '#/components/schemas/Order'
+                          - type: object
+                            properties:
+                              user_id:
+                                oneOf:
+                                  - type: string
+                                    format: objectid
+                                  - $ref: '#/components/schemas/UserBasic'
+                                description: User ID or populated user details
+                      order_items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OrderItem'
+              example:
+                success: true
+                data:
+                  order:
+                    _id: "64f1a2b3c4d5e6f7a8b9c0d1"
+                    user_id:
+                      _id: "64f1a2b3c4d5e6f7a8b9c0d0"
+                      first_name: "John"
+                      last_name: "Doe"
+                      email: "john.doe@example.com"
+                      mobile_number: "+1234567890"
+                      profile_icon: "https://example.com/profile.jpg"
+                    shipping_address_id:
+                      _id: "64f1a2b3c4d5e6f7a8b9c0d3"
+                      full_name: "John Doe"
+                      mobile_number: "+1234567890"
+                      formatted_address: "123 Main Street, Apt 4B, New York, NY 10001, United States"
+                    order_number: "ORD-2024-00001"
+                    order_status: "pending"
+                    payment_status: "cod"
+                    total_amount: 299.97
+                    created_at: "2024-01-15T10:30:00.000Z"
+                  order_items:
+                    - _id: "64f1a2b3c4d5e6f7a8b9c0d2"
+                      product_id:
+                        _id: "64f1a2b3c4d5e6f7a8b9c0d4"
+                        name: "iPhone 15 Pro"
+                        sku: "IPH15PRO001"
+                      variation_id: null
+                      product_name_snapshot: "iPhone 15 Pro"
+                      product_price_snapshot: 299.97
+                      quantity: 1
+                      price: 299.97
+        '400':
+          description: Invalid order ID
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Delivery record not found (when updating)
+          description: Order not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Admin access required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse' 
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  code:
+                    type: string
+                    example: "ADMIN_ACCESS_REQUIRED"
+                  message:
+                    type: string
+                    example: "Admin access required"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders/{orderId}/status:
+    patch:
+      tags:
+        - Orders
+      summary: Update order status (Admin only)
+      description: Update the status of an order. Stock is restored if order is cancelled. Admin access required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Order ID to update
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order_status
+              properties:
+                order_status:
+                  type: string
+                  enum: [pending, shipped, cancelled, delivered, return]
+                  description: New order status
+                  example: "shipped"
+      responses:
+        '200':
+          description: Order status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Order status updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      order:
+                        $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad request - invalid status or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Order status must be one of: pending, shipped, cancelled, delivered, return"
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  code:
+                    type: string
+                    example: "ADMIN_ACCESS_REQUIRED"
+                  message:
+                    type: string
+                    example: "Admin access required"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Order:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: Order ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+        user_id:
+          type: string
+          format: objectid
+          description: User ID who placed the order
+          example: "64f1a2b3c4d5e6f7a8b9c0d0"
+        shipping_address_id:
+          oneOf:
+            - type: string
+              format: objectid
+            - $ref: '#/components/schemas/ShippingAddress'
+          description: Shipping address ID or populated shipping address
+        order_number:
+          type: string
+          description: Human-readable order number
+          example: "ORD-2024-00001"
+        order_status:
+          type: string
+          enum: [pending, shipped, cancelled, delivered, return]
+          description: Current order status
+          example: "pending"
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Delivery timestamp (set when status is 'delivered')
+          example: "2024-01-15T10:30:00.000Z"
+        payment_status:
+          type: string
+          enum: [paid, cod, unpaid, refunded]
+          description: Payment status
+          example: "cod"
+        discount_type:
+          type: string
+          enum: [price, percentage, null]
+          nullable: true
+          description: Order-level discount type
+          example: "percentage"
+        discount_rate:
+          type: number
+          format: float
+          description: Order-level discount rate
+          example: 10
+        total_amount:
+          type: number
+          format: float
+          description: Total order amount (after discounts)
+          example: 299.97
+        discount_amount:
+          type: number
+          format: float
+          description: Total discount amount (virtual field)
+          example: 30.00
+        subtotal:
+          type: number
+          format: float
+          description: Subtotal before order-level discount (virtual field)
+          example: 329.97
+        status_display:
+          type: string
+          description: Human-readable status (virtual field)
+          example: "Pending"
+        payment_status_display:
+          type: string
+          description: Human-readable payment status (virtual field)
+          example: "Cash on Delivery"
+        created_at:
+          type: string
+          format: date-time
+          description: Order creation timestamp
+          example: "2024-01-15T10:30:00.000Z"
+      required:
+        - _id
+        - user_id
+        - shipping_address_id
+        - order_number
+        - order_status
+        - payment_status
+        - total_amount
+        - created_at
+
+    OrderItem:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: Order item ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d2"
+        order_id:
+          type: string
+          format: objectid
+          description: Order ID this item belongs to
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+        product_id:
+          oneOf:
+            - type: string
+              format: objectid
+            - type: object
+              properties:
+                _id:
+                  type: string
+                  format: objectid
+                name:
+                  type: string
+                sku:
+                  type: string
+                description:
+                  type: string
+          description: Product ID or populated product
+          example: "64f1a2b3c4d5e6f7a8b9c0d3"
+        variation_id:
+          oneOf:
+            - type: string
+              format: objectid
+            - type: object
+              properties:
+                _id:
+                  type: string
+                  format: objectid
+                color:
+                  type: string
+                size:
+                  type: string
+            - type: "null"
+          nullable: true
+          description: Product variation ID or populated variation (if applicable)
+          example: "64f1a2b3c4d5e6f7a8b9c0d4"
+        product_name_snapshot:
+          type: string
+          maxLength: 200
+          description: Product name at time of order (snapshot)
+          example: "iPhone 15 Pro"
+        product_price_snapshot:
+          type: number
+          format: float
+          description: Product price at time of order (snapshot)
+          example: 999.99
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 999
+          description: Quantity ordered
+          example: 2
+        price:
+          type: number
+          format: float
+          description: Final price for this item (price × quantity)
+          example: 1999.98
+        total_value:
+          type: number
+          format: float
+          description: Total item value (virtual field, same as price)
+          example: 1999.98
+        item_discount:
+          type: number
+          format: float
+          description: Discount amount for this item (virtual field)
+          example: 100.00
+        discount_percentage:
+          type: number
+          format: float
+          description: Discount percentage for this item (virtual field)
+          example: 5.0
+      required:
+        - _id
+        - order_id
+        - product_id
+        - product_name_snapshot
+        - product_price_snapshot
+        - quantity
+        - price
+
+    ReturnRequest:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: Return request ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d5"
+        user_id:
+          type: string
+          format: objectid
+          description: User ID who requested the return
+          example: "64f1a2b3c4d5e6f7a8b9c0d0"
+        order_id:
+          oneOf:
+            - type: string
+              format: objectid
+            - type: object
+              properties:
+                _id:
+                  type: string
+                  format: objectid
+                order_number:
+                  type: string
+                order_status:
+                  type: string
+                total_amount:
+                  type: number
+                created_at:
+                  type: string
+                  format: date-time
+          description: Order ID or populated order
+        order_item_id:
+          oneOf:
+            - type: string
+              format: objectid
+            - type: object
+              properties:
+                _id:
+                  type: string
+                  format: objectid
+                product_name_snapshot:
+                  type: string
+                quantity:
+                  type: integer
+                price:
+                  type: number
+          description: Order item ID or populated order item
+        reason:
+          type: string
+          maxLength: 1000
+          description: Detailed reason for return
+          example: "Product arrived damaged and does not match description"
+        return_type:
+          type: string
+          enum: [Damaged, 'Wrong item', 'Size issue', 'Quality issue', 'Not as described', 'Received late', 'Changed mind', Other]
+          description: Type of return
+          example: "Damaged"
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Additional notes
+          example: "The packaging was torn and product was scratched"
+        status:
+          type: string
+          enum: [requested, approved, rejected, picked-up, cancelled]
+          description: Return request status
+          example: "requested"
+        status_display:
+          type: string
+          description: Human-readable status (virtual field)
+          example: "Requested"
+        notes_display:
+          type: string
+          description: Display notes or default message (virtual field)
+          example: "Custom reason provided"
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Resolution timestamp
+          example: "2024-01-20T10:30:00.000Z"
+        created_at:
+          type: string
+          format: date-time
+          description: Return request creation timestamp
+          example: "2024-01-15T10:30:00.000Z"
+      required:
+        - _id
+        - user_id
+        - order_id
+        - order_item_id
+        - reason
+        - return_type
+        - status
+        - created_at
+
+    ShippingAddress:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: Shipping address ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d3"
+        user_id:
+          type: string
+          format: objectid
+          description: User ID this address belongs to
+        full_name:
+          type: string
+          maxLength: 100
+          description: Full name of the recipient
+          example: "John Doe"
+        mobile_number:
+          type: string
+          maxLength: 15
+          description: Mobile number
+          example: "+1234567890"
+        address_line_1:
+          type: string
+          maxLength: 200
+          description: Primary address line
+          example: "123 Main Street"
+        address_line_2:
+          type: string
+          maxLength: 200
+          nullable: true
+          description: Secondary address line
+          example: "Apt 4B"
+        landmark:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: Nearby landmark
+          example: "Near Central Park"
+        city:
+          type: string
+          maxLength: 100
+          description: City name
+          example: "New York"
+        state:
+          type: string
+          maxLength: 100
+          description: State or province
+          example: "New York"
+        postal_code:
+          type: string
+          maxLength: 20
+          description: Postal or ZIP code
+          example: "10001"
+        country:
+          type: string
+          maxLength: 100
+          description: Country name
+          example: "United States"
+        is_default:
+          type: boolean
+          description: Whether this is the default address
+          example: true
+        formatted_address:
+          type: string
+          description: Formatted full address (virtual field)
+          example: "123 Main Street, Apt 4B, Near Central Park, New York, New York 10001, United States"
+
+    UserBasic:
+      type: object
+      description: Basic user information (populated in admin order views)
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: User ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d0"
+        first_name:
+          type: string
+          description: User's first name
+          example: "John"
+        last_name:
+          type: string
+          description: User's last name
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
+        mobile_number:
+          type: string
+          description: User's mobile number
+          example: "+1234567890"
+        profile_icon:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to user's profile icon
+          example: "https://example.com/profile.jpg"
+      required:
+        - _id
+        - first_name
+        - last_name
+        - email
+
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          description: Current page number
+          example: 1
+        total_pages:
+          type: integer
+          description: Total number of pages
+          example: 5
+        total_orders:
+          type: integer
+          description: Total number of items (orders/returns)
+          example: 50
+        limit:
+          type: integer
+          description: Items per page
+          example: 10
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: "Order not found"
+        error:
+          type: string
+          description: Detailed error information (optional)
+          example: "Database connection failed"
+        errors:
+          type: array
+          items:
+            type: string
+          description: Array of validation errors (optional)
+          example:
+            - "Order ID is required"
+            - "Order item ID is required"
+      required:
+        - success
+        - message
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              code:
+                type: string
+                example: "UNAUTHORIZED"
+              message:
+                type: string
+                example: "Access token is required"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Error placing order"
+              error:
+                type: string
+                example: "Database connection failed"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication

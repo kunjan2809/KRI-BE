@@ -17,6 +17,7 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const leadRoutes = require("./routes/leadRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const wishlistRoutes = require("./routes/wishlistRoutes");
+const shippingAddressRoutes = require("./routes/shippingAddressRoutes");
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use("/api/category", categoryRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/addresses", shippingAddressRoutes);
 
 // Global error handler (optional)
 app.use((err, req, res, next) => {

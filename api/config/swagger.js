@@ -26,6 +26,7 @@ const categoryEndpoints = loadYamlFile(path.join(__dirname, '../docs/category-en
 const leadEndpoints = loadYamlFile(path.join(__dirname, '../docs/lead-endpoints.yaml'));
 const cartEndpoints = loadYamlFile(path.join(__dirname, '../docs/cart-endpoints.yaml'));
 const wishlistEndpoints = loadYamlFile(path.join(__dirname, '../docs/wishlist-endpoints.yaml'));
+const shippingAddressEndpoints = loadYamlFile(path.join(__dirname, '../docs/shipping-address-endpoints.yaml'));
 
 // Merge all documentation into a single Swagger spec
 const swaggerSpec = {
@@ -44,7 +45,8 @@ const swaggerSpec = {
              ...categoryEndpoints.components?.schemas,
              ...leadEndpoints.components?.schemas,
              ...cartEndpoints.components?.schemas,
-             ...wishlistEndpoints.components?.schemas
+             ...wishlistEndpoints.components?.schemas,
+             ...shippingAddressEndpoints.components?.schemas
            }
          },
            paths: {
@@ -58,7 +60,8 @@ const swaggerSpec = {
            ...categoryEndpoints.paths,
            ...leadEndpoints.paths,
            ...cartEndpoints.paths,
-           ...wishlistEndpoints.paths
+           ...wishlistEndpoints.paths,
+           ...shippingAddressEndpoints.paths
          },
            tags: [
            ...(authEndpoints.tags || []),
@@ -71,7 +74,8 @@ const swaggerSpec = {
            ...(categoryEndpoints.tags || []),
            ...(leadEndpoints.tags || []),
            ...(cartEndpoints.tags || []),
-           ...(wishlistEndpoints.tags || [])
+           ...(wishlistEndpoints.tags || []),
+           ...(shippingAddressEndpoints.tags || [])
          ]
 };
 

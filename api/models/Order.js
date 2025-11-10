@@ -11,6 +11,13 @@ const orderSchema = new mongoose.Schema({
     ref: 'ShippingAddress',
     required: [true, 'Shipping address is required']
   },
+  order_number: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true,
+    description: 'Human-readable order number (e.g., ORD-2024-00001)'
+  },
   order_status: {
     type: String,
     enum: {
@@ -70,6 +77,7 @@ const orderSchema = new mongoose.Schema({
 orderSchema.index({ user_id: 1 });
 orderSchema.index({ order_status: 1 });
 orderSchema.index({ payment_status: 1 });
+orderSchema.index({ order_number: 1 });
 orderSchema.index({ created_at: -1 });
 orderSchema.index({ user_id: 1, created_at: -1 });
 
@@ -124,6 +132,43 @@ orderSchema.virtual('payment_status_display').get(function() {
     'refunded': 'Refunded'
   };
   return statusMap[this.payment_status] || this.payment_status;
+});
+
+// Static method to generate order number
+orderSchema.statics.generateOrderNumber = async function() {
+  const year = new Date().getFullYear();
+  const prefix = `ORD-${year}-`;
+  
+  // Find the latest order number for this year
+  const latestOrder = await this.findOne({
+    order_number: { $regex: `^${prefix}` }
+  }).sort({ order_number: -1 });
+  
+  let sequence = 1;
+  if (latestOrder && latestOrder.order_number) {
+    const parts = latestOrder.order_number.split('-');
+    if (parts.length === 3) {
+      const lastSequence = parseInt(parts[2]);
+      if (!isNaN(lastSequence)) {
+        sequence = lastSequence + 1;
+      }
+    }
+  }
+  
+  // Format: ORD-YYYY-XXXXX (5 digits)
+  return `${prefix}${sequence.toString().padStart(5, '0')}`;
+};
+
+// Pre-save middleware to generate order number
+orderSchema.pre('save', async function(next) {
+  if (!this.order_number && this.isNew) {
+    try {
+      this.order_number = await this.constructor.generateOrderNumber();
+    } catch (error) {
+      return next(error);
+    }
+  }
+  next();
 });
 
 // Method to update order status
