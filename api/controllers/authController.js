@@ -285,11 +285,156 @@ const getMe = async (req, res) => {
   }
 };
 
+// Update User Profile (User can edit their own profile)
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { first_name, last_name, mobile_number, profile_icon } = req.body;
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Validate and update first_name
+    if (first_name !== undefined) {
+      if (!first_name || first_name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'First name cannot be empty'
+        });
+      }
+      if (first_name.trim().length > 50) {
+        return res.status(400).json({
+          success: false,
+          message: 'First name cannot exceed 50 characters'
+        });
+      }
+      user.first_name = first_name.trim();
+    }
+
+    // Validate and update last_name
+    if (last_name !== undefined) {
+      if (!last_name || last_name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Last name cannot be empty'
+        });
+      }
+      if (last_name.trim().length > 50) {
+        return res.status(400).json({
+          success: false,
+          message: 'Last name cannot exceed 50 characters'
+        });
+      }
+      user.last_name = last_name.trim();
+    }
+
+    // Validate and update mobile_number
+    if (mobile_number !== undefined) {
+      // Allow null/empty string to clear mobile number
+      if (mobile_number === null || mobile_number === '') {
+        user.mobile_number = null;
+      } else {
+        // Validate mobile number format
+        const mobileRegex = /^[+]?[\d\s\-\(\)]+$/;
+        if (!mobileRegex.test(mobile_number)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Please enter a valid mobile number'
+          });
+        }
+        if (mobile_number.length > 15) {
+          return res.status(400).json({
+            success: false,
+            message: 'Mobile number cannot exceed 15 characters'
+          });
+        }
+        
+        // Check if mobile number is already taken by another user
+        const existingUser = await User.findOne({
+          mobile_number: mobile_number,
+          _id: { $ne: userId }
+        });
+        
+        if (existingUser) {
+          return res.status(400).json({
+            success: false,
+            message: 'Mobile number is already registered to another account'
+          });
+        }
+        
+        user.mobile_number = mobile_number;
+      }
+    }
+
+    // Validate and update profile_icon
+    if (profile_icon !== undefined) {
+      // Allow null/empty string to clear profile icon
+      if (profile_icon === null || profile_icon === '') {
+        user.profile_icon = null;
+      } else {
+        if (profile_icon.length > 500) {
+          return res.status(400).json({
+            success: false,
+            message: 'Profile icon URL cannot exceed 500 characters'
+          });
+        }
+        user.profile_icon = profile_icon.trim();
+      }
+    }
+
+    // Save the updated user
+    await user.save();
+
+    // Fetch the updated user (to get virtual fields like full_name)
+    const updatedUser = await User.findById(userId).select('-password -reset_token -reset_token_expires');
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: updatedUser
+      }
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    
+    // Handle duplicate key error (for mobile_number)
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mobile number is already registered to another account'
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: errors[0] || 'Validation error'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error updating profile'
+    });
+  }
+};
+
 module.exports = {
   signup,
   login,
   forgetPassword,
   resetPassword,
   getProfile,
-  getMe
+  getMe,
+  updateProfile
 }; 

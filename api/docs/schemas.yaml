@@ -812,6 +812,36 @@ ResetPasswordRequest:
     - token
     - new_password
 
+# Update Profile Request
+UpdateProfileRequest:
+  type: object
+  description: Request body for updating user profile. All fields are optional.
+  properties:
+    first_name:
+      type: string
+      description: User's first name
+      minLength: 1
+      maxLength: 50
+      example: "John"
+    last_name:
+      type: string
+      description: User's last name
+      minLength: 1
+      maxLength: 50
+      example: "Doe"
+    mobile_number:
+      type: string
+      nullable: true
+      description: User's mobile number (optional, must be unique if provided). Set to null or empty string to clear.
+      maxLength: 15
+      example: "+1234567890"
+    profile_icon:
+      type: string
+      nullable: true
+      description: User's profile icon URL. Set to null or empty string to clear.
+      maxLength: 500
+      example: "https://example.com/profile-icons/icon5.png"
+
 # Product Creation Request
 ProductCreationRequest:
   type: object
