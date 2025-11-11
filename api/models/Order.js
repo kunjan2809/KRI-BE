@@ -204,19 +204,12 @@ orderSchema.statics.getOrdersByStatus = function(status, limit = 10, skip = 0) {
     .skip(skip);
 };
 
-// Ensure virtual fields are serialized
-orderSchema.set('toJSON', {
-  virtuals: true
-});
-
-const Order = mongoose.model('Order', orderSchema);
-
 // Static method to clean up problematic order_id index (leftover from old schema)
 // This can be called manually or will be called automatically on first error
-Order.statics.cleanupOrderIdIndex = async function() {
+orderSchema.statics.cleanupOrderIdIndex = async function() {
   try {
     if (!this.collection) {
-      return; // Collection not ready yet
+      return false; // Collection not ready yet
     }
     const collection = this.collection;
     const indexes = await collection.indexes();
@@ -237,5 +230,12 @@ Order.statics.cleanupOrderIdIndex = async function() {
     return false;
   }
 };
+
+// Ensure virtual fields are serialized
+orderSchema.set('toJSON', {
+  virtuals: true
+});
+
+const Order = mongoose.model('Order', orderSchema);
 
 module.exports = Order; 

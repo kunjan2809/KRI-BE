@@ -460,12 +460,12 @@ components:
               example: 1250
             active_users:
               type: integer
-              description: Number of active users (status: active, excluding admins)
+              description: "Number of active users (status: active, excluding admins)"
               minimum: 0
               example: 1180
             banned_users:
               type: integer
-              description: Number of banned users (status: banned, excluding admins)
+              description: "Number of banned users (status: banned, excluding admins)"
               minimum: 0
               example: 70
           required:
