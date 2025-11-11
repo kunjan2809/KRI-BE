@@ -561,4 +561,101 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 success: false
-                message: "Error fetching user data" 
+                message: "Error fetching user data"
+
+  /api/auth/change-password:
+    post:
+      summary: Change password
+      description: Change user password by providing old password and new password. Requires authentication. The current session will remain active after password change.
+      tags: [User Management]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            examples:
+              example1:
+                summary: Change password
+                value:
+                  old_password: "currentpassword123"
+                  new_password: "newpassword456"
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: "Password changed successfully"
+        '400':
+          description: Bad request - missing fields, password too short, or new password same as old password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingFields:
+                  summary: Missing required fields
+                  value:
+                    success: false
+                    message: "Old password and new password are required"
+                shortPassword:
+                  summary: Password too short
+                  value:
+                    success: false
+                    message: "New password must be at least 6 characters long"
+                samePassword:
+                  summary: New password same as old password
+                  value:
+                    success: false
+                    message: "New password must be different from the old password"
+        '401':
+          description: Unauthorized - missing/invalid token or incorrect old password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingToken:
+                  summary: Missing authorization token
+                  value:
+                    success: false
+                    message: "Access token is required"
+                invalidToken:
+                  summary: Invalid token
+                  value:
+                    success: false
+                    message: "Invalid token"
+                expiredToken:
+                  summary: Expired token
+                  value:
+                    success: false
+                    message: "Token expired"
+                incorrectPassword:
+                  summary: Incorrect old password
+                  value:
+                    success: false
+                    message: "Old password is incorrect"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "User not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Error changing password" 

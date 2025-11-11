@@ -812,6 +812,23 @@ ResetPasswordRequest:
     - token
     - new_password
 
+# Change Password Request
+ChangePasswordRequest:
+  type: object
+  properties:
+    old_password:
+      type: string
+      description: Current password of the user
+      example: "currentpassword123"
+    new_password:
+      type: string
+      description: New password (minimum 6 characters, must be different from old password)
+      minLength: 6
+      example: "newpassword456"
+  required:
+    - old_password
+    - new_password
+
 # Update Profile Request
 UpdateProfileRequest:
   type: object

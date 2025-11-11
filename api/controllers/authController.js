@@ -429,6 +429,72 @@ const updateProfile = async (req, res) => {
   }
 };
 
+// Change Password (requires authentication)
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { old_password, new_password } = req.body;
+
+    // Validate input
+    if (!old_password || !new_password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Old password and new password are required'
+      });
+    }
+
+    // Validate new password length
+    if (new_password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    // Find the user (need to fetch with password to compare)
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify old password
+    const isOldPasswordValid = await user.comparePassword(old_password);
+    if (!isOldPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Old password is incorrect'
+      });
+    }
+
+    // Check if new password is different from old password
+    const isSamePassword = await user.comparePassword(new_password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from the old password'
+      });
+    }
+
+    // Update password (the pre-save middleware will hash it automatically)
+    user.password = new_password;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error changing password'
+    });
+  }
+};
+
 module.exports = {
   signup,
   login,
@@ -436,5 +502,6 @@ module.exports = {
   resetPassword,
   getProfile,
   getMe,
-  updateProfile
+  updateProfile,
+  changePassword
 }; 
