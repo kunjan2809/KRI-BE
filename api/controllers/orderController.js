@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
@@ -691,15 +692,14 @@ const getUserReturnRequests = async (req, res) => {
 // 8. Get All Orders (Admin Only) - with filtering, sorting, pagination, and search
 const getAllOrders = async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 20,
-      order_status, // Filter by order status: pending, shipped, cancelled, delivered, return
-      payment_status, // Filter by payment status: paid, cod, unpaid, refunded
-      search, // Search by order_number, user name, user email
-      sort_by = 'created_at',
-      sort_order = 'desc'
-    } = req.query;
+    // Parse query parameters with proper type conversion
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const order_status = req.query.order_status; // Filter by order status: pending, shipped, cancelled, delivered, return
+    const payment_status = req.query.payment_status; // Filter by payment status: paid, cod, unpaid, refunded
+    const search = req.query.search; // Search by order_number, user name, user email
+    const sort_by = req.query.sort_by || 'created_at';
+    const sort_order = req.query.sort_order || 'desc';
 
     const skip = (page - 1) * limit;
 
@@ -738,10 +738,10 @@ const getAllOrders = async (req, res) => {
 
       if (isObjectId) {
         // If search is ObjectId, search by user_id directly
-        filterQuery.user_id = search;
+        filterQuery.user_id = new mongoose.Types.ObjectId(search);
         orders = await Order.find(filterQuery)
           .sort(sortObject)
-          .limit(parseInt(limit))
+          .limit(limit)
           .skip(skip);
         totalOrders = await Order.countDocuments(filterQuery);
       } else {
@@ -819,15 +819,39 @@ const getAllOrders = async (req, res) => {
         totalOrders = countResult.length > 0 ? countResult[0].total : 0;
 
         // Convert aggregation results to Mongoose documents for population
-        const orderIds = orders.map(order => order._id);
-        orders = await Order.find({ _id: { $in: orderIds } })
-          .sort(sortObject);
+        // Preserve the order from aggregation (already sorted, paginated)
+        const orderIds = orders.map(order => {
+          // Handle both ObjectId and string formats
+          if (order._id instanceof mongoose.Types.ObjectId) {
+            return order._id;
+          }
+          return new mongoose.Types.ObjectId(order._id);
+        });
+        const orderMap = new Map();
+        
+        // Fetch orders in the same order as aggregation results
+        const fetchedOrders = await Order.find({ 
+          _id: { $in: orderIds } 
+        });
+        
+        // Create a map for quick lookup
+        fetchedOrders.forEach(order => {
+          orderMap.set(order._id.toString(), order);
+        });
+        
+        // Reorder to match aggregation results (preserve sort and pagination)
+        orders = orderIds
+          .map(id => {
+            const idStr = id.toString();
+            return orderMap.get(idStr);
+          })
+          .filter(order => order !== undefined);
       }
     } else {
       // Regular query without search
       orders = await Order.find(filterQuery)
         .sort(sortObject)
-        .limit(parseInt(limit))
+        .limit(limit)
         .skip(skip);
 
       totalOrders = await Order.countDocuments(filterQuery);
@@ -870,10 +894,10 @@ const getAllOrders = async (req, res) => {
       data: {
         orders: filteredOrders,
         pagination: {
-          current_page: parseInt(page),
+          current_page: page,
           total_pages: Math.ceil(totalOrders / limit),
           total_orders: totalOrders,
-          limit: parseInt(limit)
+          limit: limit
         },
         filters: {
           order_status: order_status || null,
