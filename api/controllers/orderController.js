@@ -190,7 +190,29 @@ const placeOrder = async (req, res) => {
       discount_rate: discount_rate || 0
     });
 
-    await order.save();
+    try {
+      await order.save();
+    } catch (error) {
+      // Handle duplicate key error for order_id index (leftover from old schema)
+      if (error.code === 11000 && error.keyPattern && error.keyPattern.order_id) {
+        console.error('Database index error: order_id_1 index exists but should not. Attempting to fix...');
+        try {
+          // Try to drop the problematic index using the static method
+          await Order.cleanupOrderIdIndex();
+          console.log('Successfully removed order_id_1 index. Retrying order creation...');
+          // Retry saving the order
+          await order.save();
+        } catch (fixError) {
+          console.error('Failed to fix index issue:', fixError);
+          return res.status(500).json({
+            success: false,
+            message: 'Database configuration error. Please contact support or run: db.orders.dropIndex("order_id_1") in MongoDB shell.'
+          });
+        }
+      } else {
+        throw error; // Re-throw if it's a different error
+      }
+    }
 
     // Create order items
     const savedOrderItems = await OrderItem.insertMany(

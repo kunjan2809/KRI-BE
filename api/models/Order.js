@@ -209,4 +209,33 @@ orderSchema.set('toJSON', {
   virtuals: true
 });
 
-module.exports = mongoose.model('Order', orderSchema); 
+const Order = mongoose.model('Order', orderSchema);
+
+// Static method to clean up problematic order_id index (leftover from old schema)
+// This can be called manually or will be called automatically on first error
+Order.statics.cleanupOrderIdIndex = async function() {
+  try {
+    if (!this.collection) {
+      return; // Collection not ready yet
+    }
+    const collection = this.collection;
+    const indexes = await collection.indexes();
+    const orderIdIndex = indexes.find(idx => idx.name === 'order_id_1');
+    
+    if (orderIdIndex) {
+      console.log('Removing problematic order_id_1 index from orders collection...');
+      await collection.dropIndex('order_id_1');
+      console.log('Successfully removed order_id_1 index');
+      return true;
+    }
+    return false;
+  } catch (error) {
+    // Ignore errors if index doesn't exist or can't be dropped
+    if (error.code !== 27 && error.codeName !== 'IndexNotFound') {
+      console.warn('Warning: Could not remove order_id_1 index:', error.message);
+    }
+    return false;
+  }
+};
+
+module.exports = Order; 
