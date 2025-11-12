@@ -739,11 +739,20 @@ paths:
                         _id: "64f1a2b3c4d5e6f7a8b9c0d4"
                         name: "iPhone 15 Pro"
                         sku: "IPH15PRO001"
+                        description: "Latest iPhone with advanced features"
+                        mrp: 1099.99
+                        price: 999.99
                       variation_id: null
                       product_name_snapshot: "iPhone 15 Pro"
                       product_price_snapshot: 299.97
                       quantity: 1
                       price: 299.97
+                      mrp: 1099.99
+                      primary_image:
+                        _id: "64f1a2b3c4d5e6f7a8b9c0d5"
+                        image_url: "/static/images/product/iphone15pro.jpg"
+                        alt_text: "iPhone 15 Pro"
+                        is_primary: true
         '400':
           description: Invalid order ID
           content:

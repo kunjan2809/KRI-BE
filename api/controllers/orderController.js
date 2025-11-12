@@ -3,6 +3,7 @@ const Order = require('../models/Order');
 const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
 const ProductVariation = require('../models/ProductVariation');
+const ProductImage = require('../models/ProductImage');
 const ShippingAddress = require('../models/ShippingAddress');
 const Cart = require('../models/Cart');
 const ReturnRequest = require('../models/ReturnRequest');
@@ -354,14 +355,39 @@ const getOrderDetails = async (req, res) => {
 
     // Get order items with product and variation details
     const orderItems = await OrderItem.find({ order_id: orderId })
-      .populate('product_id', 'name sku description')
+      .populate('product_id', 'name sku description mrp price')
       .populate('variation_id', 'color size');
+
+    // Enhance order items with primary image and MRP
+    const orderItemsWithDetails = await Promise.all(
+      orderItems.map(async (item) => {
+        const itemObj = item.toObject();
+        const product = item.product_id;
+        
+        // Get primary image for the product
+        const primaryImage = await ProductImage.getPrimaryImage(product._id);
+        
+        // Determine MRP: use product.mrp if available, otherwise use product_price_snapshot
+        const mrp = product.mrp || itemObj.product_price_snapshot || product.price || 0;
+        
+        return {
+          ...itemObj,
+          primary_image: primaryImage ? {
+            _id: primaryImage._id,
+            image_url: primaryImage.image_url,
+            alt_text: primaryImage.alt_text,
+            is_primary: primaryImage.is_primary
+          } : null,
+          mrp: mrp
+        };
+      })
+    );
 
     res.json({
       success: true,
       data: {
         order: order.toObject(),
-        order_items: orderItems
+        order_items: orderItemsWithDetails
       }
     });
 
@@ -994,14 +1020,39 @@ const getOrderDetailsAdmin = async (req, res) => {
 
     // Get order items with product and variation details
     const orderItems = await OrderItem.find({ order_id: orderId })
-      .populate('product_id', 'name sku description')
+      .populate('product_id', 'name sku description mrp price')
       .populate('variation_id', 'color size');
+
+    // Enhance order items with primary image and MRP
+    const orderItemsWithDetails = await Promise.all(
+      orderItems.map(async (item) => {
+        const itemObj = item.toObject();
+        const product = item.product_id;
+        
+        // Get primary image for the product
+        const primaryImage = await ProductImage.getPrimaryImage(product._id);
+        
+        // Determine MRP: use product.mrp if available, otherwise use product_price_snapshot
+        const mrp = product.mrp || itemObj.product_price_snapshot || product.price || 0;
+        
+        return {
+          ...itemObj,
+          primary_image: primaryImage ? {
+            _id: primaryImage._id,
+            image_url: primaryImage.image_url,
+            alt_text: primaryImage.alt_text,
+            is_primary: primaryImage.is_primary
+          } : null,
+          mrp: mrp
+        };
+      })
+    );
 
     res.json({
       success: true,
       data: {
         order: order.toObject(),
-        order_items: orderItems
+        order_items: orderItemsWithDetails
       }
     });
 

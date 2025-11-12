@@ -1762,6 +1762,34 @@ OrderItem:
       type: number
       description: Virtual field - discount percentage for this item
       example: 0
+    primary_image:
+      type: object
+      nullable: true
+      description: Primary product image for this order item
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: Image ID
+          example: "507f1f77bcf86cd799439015"
+        image_url:
+          type: string
+          description: Image URL
+          example: "/static/images/product/iphone15pro.jpg"
+        alt_text:
+          type: string
+          description: Alt text for the image
+          example: "iPhone 15 Pro"
+        is_primary:
+          type: boolean
+          description: Whether this is the primary image
+          example: true
+    mrp:
+      type: number
+      format: float
+      description: Maximum Retail Price (MRP) for this order item. Uses product.mrp if available, otherwise falls back to product_price_snapshot or product.price
+      minimum: 0
+      example: 1099.99
   required:
     - _id
     - order_id
@@ -1769,4 +1797,5 @@ OrderItem:
     - product_name_snapshot
     - product_price_snapshot
     - quantity
-    - price 
+    - price
+    - mrp 
