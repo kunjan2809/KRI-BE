@@ -382,9 +382,9 @@ paths:
                   example: "Product arrived damaged and does not match description"
                 return_type:
                   type: string
-                  enum: [Damaged, 'Wrong item', 'Size issue', 'Quality issue', 'Not as described', 'Received late', 'Changed mind', Other]
-                  default: Other
-                  description: Type of return
+                  enum: ['Damaged', 'Wrong item', 'Size issue', 'Quality issue', 'Not as described', 'Received late', 'Changed mind', 'Other']
+                  default: 'Other'
+                  description: Type of return (predefined category)
                   example: "Damaged"
                 notes:
                   type: string
@@ -1109,8 +1109,8 @@ components:
           example: "Product arrived damaged and does not match description"
         return_type:
           type: string
-          enum: [Damaged, 'Wrong item', 'Size issue', 'Quality issue', 'Not as described', 'Received late', 'Changed mind', Other]
-          description: Type of return
+          enum: ['Damaged', 'Wrong item', 'Size issue', 'Quality issue', 'Not as described', 'Received late', 'Changed mind', 'Other']
+          description: Type of return (predefined category)
           example: "Damaged"
         notes:
           type: string
