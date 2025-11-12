@@ -698,6 +698,8 @@ const getAllOrders = async (req, res) => {
     const order_status = req.query.order_status; // Filter by order status: pending, shipped, cancelled, delivered, return
     const payment_status = req.query.payment_status; // Filter by payment status: paid, cod, unpaid, refunded
     const search = req.query.search; // Search by order_number, user name, user email
+    const start_date = req.query.start_date; // Filter by start date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)
+    const end_date = req.query.end_date; // Filter by end date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)
     const sort_by = req.query.sort_by || 'created_at';
     const sort_order = req.query.sort_order || 'desc';
 
@@ -705,6 +707,53 @@ const getAllOrders = async (req, res) => {
 
     // Build filter query
     let filterQuery = {};
+
+    // Date range filter
+    if (start_date || end_date) {
+      filterQuery.created_at = {};
+      
+      if (start_date) {
+        const startDate = new Date(start_date);
+        if (isNaN(startDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid start_date format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)'
+          });
+        }
+        // Set to start of day if only date is provided
+        if (!start_date.includes('T')) {
+          startDate.setHours(0, 0, 0, 0);
+        }
+        filterQuery.created_at.$gte = startDate;
+      }
+      
+      if (end_date) {
+        const endDate = new Date(end_date);
+        if (isNaN(endDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid end_date format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)'
+          });
+        }
+        // Set to end of day if only date is provided
+        if (!end_date.includes('T')) {
+          endDate.setHours(23, 59, 59, 999);
+        }
+        filterQuery.created_at.$lte = endDate;
+      }
+      
+      // Validate date range
+      if (start_date && end_date) {
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+        if (startDate > endDate) {
+          return res.status(400).json({
+            success: false,
+            message: 'start_date must be before or equal to end_date'
+          });
+        }
+      }
+    }
 
     // Order status filter
     if (order_status) {
@@ -902,7 +951,9 @@ const getAllOrders = async (req, res) => {
         filters: {
           order_status: order_status || null,
           payment_status: payment_status || null,
-          search: search || null
+          search: search || null,
+          start_date: start_date || null,
+          end_date: end_date || null
         },
         sorting: {
           sort_by: sortField,

@@ -488,6 +488,20 @@ paths:
             type: string
           description: Search by order number, user name, user email, or user ID (ObjectId)
           example: "ORD-2024"
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter orders created on or after this date. ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ). If only date is provided, time defaults to 00:00:00.
+          example: "2024-01-01"
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter orders created on or before this date. ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ). If only date is provided, time defaults to 23:59:59.999.
+          example: "2024-01-31"
         - name: sort_by
           in: query
           schema:
@@ -552,6 +566,16 @@ paths:
                             type: string
                             nullable: true
                             example: "ORD-2024"
+                          start_date:
+                            type: string
+                            nullable: true
+                            format: date-time
+                            example: "2024-01-01"
+                          end_date:
+                            type: string
+                            nullable: true
+                            format: date-time
+                            example: "2024-01-31"
                       sorting:
                         type: object
                         properties:
@@ -593,9 +617,33 @@ paths:
                     order_status: "pending"
                     payment_status: null
                     search: null
+                    start_date: "2024-01-01"
+                    end_date: "2024-01-31"
                   sorting:
                     sort_by: "created_at"
                     sort_order: "desc"
+        '400':
+          description: Bad request - invalid date format or date range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidStartDate:
+                  summary: Invalid start_date format
+                  value:
+                    success: false
+                    message: "Invalid start_date format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)"
+                invalidEndDate:
+                  summary: Invalid end_date format
+                  value:
+                    success: false
+                    message: "Invalid end_date format. Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)"
+                invalidDateRange:
+                  summary: Invalid date range
+                  value:
+                    success: false
+                    message: "start_date must be before or equal to end_date"
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
