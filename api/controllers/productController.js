@@ -1163,7 +1163,15 @@ const searchProducts = async (req, res) => {
     
     // Add category filter
     if (category_id) {
-      filterQuery.category_id = category_id;
+      // Validate and convert category_id to ObjectId
+      if (mongoose.Types.ObjectId.isValid(category_id)) {
+        filterQuery.category_id = new mongoose.Types.ObjectId(category_id);
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid category ID format'
+        });
+      }
     }
     
     // Build aggregation pipeline for complex filtering and sorting
