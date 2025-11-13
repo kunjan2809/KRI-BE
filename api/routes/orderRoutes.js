@@ -3,24 +3,43 @@ const router = express.Router();
 const orderController = require('../controllers/orderController');
 const { auth } = require('../middlewares/auth');
 
-// 1. Public Order Creation API (No authentication required)
-// Anyone can place an order by providing customer information
-router.post('/create', orderController.createOrder);
+// User routes (authenticated)
+// 1. Place Order from Cart
+// POST /api/orders/place
+router.post('/place', auth('user'), orderController.placeOrder);
 
-// 2. User Order History API (Authentication required)
-// Users must be logged in to view their order history
-router.get('/user-orders', auth('user'), orderController.getUserOrders);
+// 2. Get All Orders for User
+// GET /api/orders
+router.get('/', auth('user'), orderController.getUserOrders);
 
-// 3. Admin Orders API (Admin authentication required)
-// Only admins can access all orders with filters, pagination, and search
+// 3. Get User Return Requests
+// GET /api/orders/returns (must be before /:orderId route)
+router.get('/returns', auth('user'), orderController.getUserReturnRequests);
+
+// Admin routes (must be before /:orderId route to avoid conflicts)
+// 4. Get All Orders (Admin only) - with filtering, sorting, pagination, and search
+// GET /api/orders/admin/all?page=1&limit=20&order_status=pending&payment_status=paid&search=ORD-2024&sort_by=created_at&sort_order=desc
 router.get('/admin/all', auth('admin'), orderController.getAllOrders);
 
-// 4. Admin Get Order Details API (Admin authentication required)
-// Only admins can get complete order details including user, shipping address, and delivery info
-router.get('/admin/details/:orderId', auth('admin'), orderController.getOrderDetails);
+// 5. Get Order Details by ID (Admin only) - Admin can view any order
+// GET /api/orders/admin/:orderId
+router.get('/admin/:orderId', auth('admin'), orderController.getOrderDetailsAdmin);
 
-// 5. Admin Create or Update Delivery API (Admin authentication required)
-// Admins can create new delivery records or update existing ones
-router.post('/admin/delivery', auth('admin'), orderController.createOrUpdateDelivery);
+// 6. Update Order Status (Admin only)
+// PATCH /api/orders/:orderId/status
+router.patch('/:orderId/status', auth('admin'), orderController.updateOrderStatus);
+
+// User routes (specific routes before parameterized routes)
+// 7. Get Order Details
+// GET /api/orders/:orderId
+router.get('/:orderId', auth('user'), orderController.getOrderDetails);
+
+// 8. Cancel Order
+// PATCH /api/orders/:orderId/cancel
+router.patch('/:orderId/cancel', auth('user'), orderController.cancelOrder);
+
+// 9. Create Return Request
+// POST /api/orders/:orderId/return
+router.post('/:orderId/return', auth('user'), orderController.createReturnRequest);
 
 module.exports = router; 

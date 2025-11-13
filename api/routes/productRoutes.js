@@ -6,7 +6,9 @@ const { auth, optionalAuth } = require('../middlewares/auth');
 // Public routes with optional authentication (for wishlist status)
 router.get('/featured', optionalAuth, productController.getFeaturedProducts);
 router.get('/all', optionalAuth, productController.searchProducts);
-router.get('/variation-options', productController.getUniqueVariationOptions);
+router.get('/variation-options', optionalAuth, productController.getUniqueVariationOptions);
+router.get('/suggestions/:productId', optionalAuth, productController.getProductSuggestions);
+router.get('/details/:productId', optionalAuth, productController.getPublicProductDetails);
 
 // All other product routes require admin authentication
 router.use(auth('admin'));

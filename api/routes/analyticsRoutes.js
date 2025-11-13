@@ -30,4 +30,8 @@ router.get('/dashboard', analyticsController.getDashboardSummary);
 // GET /api/analytics/revenue
 router.get('/revenue', analyticsController.getMonthlyRevenue);
 
+// 7. User Status Analytics: Total, Active, and Banned users count
+// GET /api/analytics/users/status
+router.get('/users/status', analyticsController.getUserStatusAnalytics);
+
 module.exports = router; 

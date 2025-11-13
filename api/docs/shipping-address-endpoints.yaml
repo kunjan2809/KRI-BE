@@ -1,0 +1,609 @@
+openapi: 3.0.0
+info:
+  title: Shipping Address API
+  description: Shipping address management endpoints for e-commerce application
+  version: 1.0.0
+tags:
+  - name: Shipping Address
+    description: Shipping address management operations
+paths:
+  /api/addresses:
+    post:
+      tags:
+        - Shipping Address
+      summary: Create shipping address
+      description: Create a new shipping address for the authenticated user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - full_name
+                - mobile_number
+                - address_line_1
+                - city
+                - state
+                - postal_code
+                - country
+              properties:
+                full_name:
+                  type: string
+                  maxLength: 100
+                  description: Full name of the recipient
+                  example: "John Doe"
+                mobile_number:
+                  type: string
+                  maxLength: 15
+                  description: Mobile number with country code
+                  example: "+1234567890"
+                address_line_1:
+                  type: string
+                  maxLength: 200
+                  description: Primary address line
+                  example: "123 Main Street"
+                address_line_2:
+                  type: string
+                  maxLength: 200
+                  description: Secondary address line (optional)
+                  example: "Apt 4B"
+                landmark:
+                  type: string
+                  maxLength: 100
+                  description: Nearby landmark (optional)
+                  example: "Near Central Park"
+                city:
+                  type: string
+                  maxLength: 100
+                  description: City name
+                  example: "New York"
+                state:
+                  type: string
+                  maxLength: 100
+                  description: State or province
+                  example: "New York"
+                postal_code:
+                  type: string
+                  maxLength: 20
+                  description: Postal or ZIP code
+                  example: "10001"
+                country:
+                  type: string
+                  maxLength: 100
+                  description: Country name
+                  example: "United States"
+                is_default:
+                  type: boolean
+                  default: false
+                  description: Set as default address (only one default per user)
+                  example: true
+      responses:
+        '201':
+          description: Shipping address created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Shipping address created successfully"
+                  data:
+                    type: object
+                    properties:
+                      address:
+                        $ref: '#/components/schemas/ShippingAddress'
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingFields:
+                  summary: Missing required fields
+                  value:
+                    success: false
+                    message: "Missing required fields. Please provide: full_name, mobile_number, address_line_1, city, state, postal_code, and country"
+                validationError:
+                  summary: Validation error
+                  value:
+                    success: false
+                    message: "Validation error"
+                    errors:
+                      - "Full name cannot exceed 100 characters"
+                      - "Please enter a valid mobile number"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      tags:
+        - Shipping Address
+      summary: Get all user addresses
+      description: Retrieve all shipping addresses for the authenticated user, sorted by default address first
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Addresses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      addresses:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ShippingAddress'
+                      count:
+                        type: integer
+                        description: Total number of addresses
+                        example: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/addresses/default:
+    get:
+      tags:
+        - Shipping Address
+      summary: Get default address
+      description: Retrieve the default shipping address for the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Default address retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      address:
+                        $ref: '#/components/schemas/ShippingAddress'
+        '404':
+          description: No default address found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "No default address found"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/addresses/{addressId}:
+    get:
+      tags:
+        - Shipping Address
+      summary: Get address by ID
+      description: Retrieve a specific shipping address by ID (must belong to the authenticated user)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Shipping address ID
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+      responses:
+        '200':
+          description: Address retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      address:
+                        $ref: '#/components/schemas/ShippingAddress'
+        '400':
+          description: Invalid address ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Invalid address ID"
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Shipping address not found"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Shipping Address
+      summary: Update shipping address
+      description: Update an existing shipping address (must belong to the authenticated user)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Shipping address ID to update
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+                  maxLength: 100
+                  description: Full name of the recipient
+                  example: "John Doe"
+                mobile_number:
+                  type: string
+                  maxLength: 15
+                  description: Mobile number with country code
+                  example: "+1234567890"
+                address_line_1:
+                  type: string
+                  maxLength: 200
+                  description: Primary address line
+                  example: "123 Main Street"
+                address_line_2:
+                  type: string
+                  maxLength: 200
+                  description: Secondary address line (optional, can be empty string to clear)
+                  example: "Apt 4B"
+                landmark:
+                  type: string
+                  maxLength: 100
+                  description: Nearby landmark (optional, can be empty string to clear)
+                  example: "Near Central Park"
+                city:
+                  type: string
+                  maxLength: 100
+                  description: City name
+                  example: "New York"
+                state:
+                  type: string
+                  maxLength: 100
+                  description: State or province
+                  example: "New York"
+                postal_code:
+                  type: string
+                  maxLength: 20
+                  description: Postal or ZIP code
+                  example: "10001"
+                country:
+                  type: string
+                  maxLength: 100
+                  description: Country name
+                  example: "United States"
+                is_default:
+                  type: boolean
+                  description: Set as default address (only one default per user)
+                  example: true
+      responses:
+        '200':
+          description: Address updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Shipping address updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      address:
+                        $ref: '#/components/schemas/ShippingAddress'
+        '400':
+          description: Bad request - validation error or invalid ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  summary: Validation error
+                  value:
+                    success: false
+                    message: "Validation error"
+                    errors:
+                      - "Full name cannot exceed 100 characters"
+                      - "Please enter a valid postal code"
+                invalidId:
+                  summary: Invalid address ID
+                  value:
+                    success: false
+                    message: "Invalid address ID"
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Shipping address not found"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Shipping Address
+      summary: Delete shipping address
+      description: Delete a shipping address (must belong to the authenticated user)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: Shipping address ID to delete
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+      responses:
+        '200':
+          description: Address deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Shipping address deleted successfully"
+                  data:
+                    type: object
+                    properties:
+                      deleted_address:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: objectid
+                            description: Deleted address ID
+                            example: "64f1a2b3c4d5e6f7a8b9c0d1"
+                          full_name:
+                            type: string
+                            description: Full name of the deleted address
+                            example: "John Doe"
+        '400':
+          description: Invalid address ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Invalid address ID"
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Shipping address not found"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    ShippingAddress:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: Unique shipping address identifier
+          example: "64f1a2b3c4d5e6f7a8b9c0d1"
+        user_id:
+          type: string
+          format: objectid
+          description: User ID this address belongs to
+          example: "64f1a2b3c4d5e6f7a8b9c0d0"
+        full_name:
+          type: string
+          maxLength: 100
+          description: Full name of the recipient
+          example: "John Doe"
+        mobile_number:
+          type: string
+          maxLength: 15
+          description: Mobile number with country code
+          example: "+1234567890"
+        address_line_1:
+          type: string
+          maxLength: 200
+          description: Primary address line
+          example: "123 Main Street"
+        address_line_2:
+          type: string
+          maxLength: 200
+          nullable: true
+          description: Secondary address line
+          example: "Apt 4B"
+        landmark:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: Nearby landmark
+          example: "Near Central Park"
+        city:
+          type: string
+          maxLength: 100
+          description: City name
+          example: "New York"
+        state:
+          type: string
+          maxLength: 100
+          description: State or province
+          example: "New York"
+        postal_code:
+          type: string
+          maxLength: 20
+          description: Postal or ZIP code
+          example: "10001"
+        country:
+          type: string
+          maxLength: 100
+          description: Country name
+          example: "United States"
+        is_default:
+          type: boolean
+          description: Whether this is the default address
+          example: true
+        formatted_address:
+          type: string
+          description: Formatted full address (virtual field)
+          example: "123 Main Street, Apt 4B, Near Central Park, New York, New York 10001, United States"
+        created_at:
+          type: string
+          format: date-time
+          description: Address creation timestamp
+          example: "2024-01-15T10:30:00.000Z"
+        edited_at:
+          type: string
+          format: date-time
+          description: Last edit timestamp
+          example: "2024-01-15T10:30:00.000Z"
+      required:
+        - _id
+        - user_id
+        - full_name
+        - mobile_number
+        - address_line_1
+        - city
+        - state
+        - postal_code
+        - country
+        - is_default
+        - created_at
+        - edited_at
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: "Shipping address not found"
+        error:
+          type: string
+          description: Detailed error information (optional)
+          example: "Database connection failed"
+        errors:
+          type: array
+          items:
+            type: string
+          description: Array of validation errors (optional)
+          example:
+            - "Full name cannot exceed 100 characters"
+            - "Please enter a valid mobile number"
+      required:
+        - success
+        - message
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              code:
+                type: string
+                example: "UNAUTHORIZED"
+              message:
+                type: string
+                example: "Access token is required"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Error creating shipping address"
+              error:
+                type: string
+                example: "Database connection failed"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+

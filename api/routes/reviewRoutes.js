@@ -3,13 +3,14 @@ const router = express.Router();
 const reviewController = require('../controllers/reviewController');
 const { auth } = require('../middlewares/auth');
 
-// All review routes require authentication (user or admin)
-router.use(auth('user'));
-
+// Public routes (no authentication required)
 // 1. Get Product Reviews
 // GET /api/reviews/product/:productId
 // Returns all reviews for a product with images and metadata
 router.get('/product/:productId', reviewController.getProductReviews);
+
+// All other review routes require authentication (user or admin)
+router.use(auth('user'));
 
 // 2. Create Product Review
 // POST /api/reviews/product/:productId

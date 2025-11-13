@@ -26,8 +26,7 @@ paths:
       description: |
         Retrieve all reviews for a specific product with images and metadata.
         Returns review summary statistics and detailed review data with user information.
-      security:
-        - bearerAuth: []
+        Public API - no authentication required.
       parameters:
         - name: productId
           in: path
@@ -70,6 +69,7 @@ paths:
                           first_name: "John"
                           last_name: "Doe"
                           email: "john@example.com"
+                          profile_icon: "https://example.com/profile-icons/icon5.png"
                         title: "Amazing product!"
                         rating: 5
                         rating_description: "Excellent quality and fast delivery"
@@ -148,6 +148,7 @@ paths:
                       first_name: "John"
                       last_name: "Doe"
                       email: "john@example.com"
+                      profile_icon: "https://example.com/profile-icons/icon5.png"
                     title: "Great product!"
                     rating_description: "Really happy with this purchase. Quality is excellent and delivery was super fast."
                     rating: 5
@@ -227,6 +228,7 @@ paths:
                       first_name: "John"
                       last_name: "Doe"
                       email: "john@example.com"
+                      profile_icon: "https://example.com/profile-icons/icon5.png"
                     title: "Updated review title"
                     rating_description: "Updated review description"
                     rating: 4

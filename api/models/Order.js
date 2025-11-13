@@ -11,6 +11,13 @@ const orderSchema = new mongoose.Schema({
     ref: 'ShippingAddress',
     required: [true, 'Shipping address is required']
   },
+  order_number: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true,
+    description: 'Human-readable order number (e.g., ORD-2024-00001)'
+  },
   order_status: {
     type: String,
     enum: {
@@ -70,6 +77,7 @@ const orderSchema = new mongoose.Schema({
 orderSchema.index({ user_id: 1 });
 orderSchema.index({ order_status: 1 });
 orderSchema.index({ payment_status: 1 });
+orderSchema.index({ order_number: 1 });
 orderSchema.index({ created_at: -1 });
 orderSchema.index({ user_id: 1, created_at: -1 });
 
@@ -126,6 +134,43 @@ orderSchema.virtual('payment_status_display').get(function() {
   return statusMap[this.payment_status] || this.payment_status;
 });
 
+// Static method to generate order number
+orderSchema.statics.generateOrderNumber = async function() {
+  const year = new Date().getFullYear();
+  const prefix = `ORD-${year}-`;
+  
+  // Find the latest order number for this year
+  const latestOrder = await this.findOne({
+    order_number: { $regex: `^${prefix}` }
+  }).sort({ order_number: -1 });
+  
+  let sequence = 1;
+  if (latestOrder && latestOrder.order_number) {
+    const parts = latestOrder.order_number.split('-');
+    if (parts.length === 3) {
+      const lastSequence = parseInt(parts[2]);
+      if (!isNaN(lastSequence)) {
+        sequence = lastSequence + 1;
+      }
+    }
+  }
+  
+  // Format: ORD-YYYY-XXXXX (5 digits)
+  return `${prefix}${sequence.toString().padStart(5, '0')}`;
+};
+
+// Pre-save middleware to generate order number
+orderSchema.pre('save', async function(next) {
+  if (!this.order_number && this.isNew) {
+    try {
+      this.order_number = await this.constructor.generateOrderNumber();
+    } catch (error) {
+      return next(error);
+    }
+  }
+  next();
+});
+
 // Method to update order status
 orderSchema.methods.updateStatus = function(newStatus) {
   this.order_status = newStatus;
@@ -159,9 +204,38 @@ orderSchema.statics.getOrdersByStatus = function(status, limit = 10, skip = 0) {
     .skip(skip);
 };
 
+// Static method to clean up problematic order_id index (leftover from old schema)
+// This can be called manually or will be called automatically on first error
+orderSchema.statics.cleanupOrderIdIndex = async function() {
+  try {
+    if (!this.collection) {
+      return false; // Collection not ready yet
+    }
+    const collection = this.collection;
+    const indexes = await collection.indexes();
+    const orderIdIndex = indexes.find(idx => idx.name === 'order_id_1');
+    
+    if (orderIdIndex) {
+      console.log('Removing problematic order_id_1 index from orders collection...');
+      await collection.dropIndex('order_id_1');
+      console.log('Successfully removed order_id_1 index');
+      return true;
+    }
+    return false;
+  } catch (error) {
+    // Ignore errors if index doesn't exist or can't be dropped
+    if (error.code !== 27 && error.codeName !== 'IndexNotFound') {
+      console.warn('Warning: Could not remove order_id_1 index:', error.message);
+    }
+    return false;
+  }
+};
+
 // Ensure virtual fields are serialized
 orderSchema.set('toJSON', {
   virtuals: true
 });
 
-module.exports = mongoose.model('Order', orderSchema); 
+const Order = mongoose.model('Order', orderSchema);
+
+module.exports = Order; 

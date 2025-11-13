@@ -22,10 +22,9 @@ const returnRequestSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Return reason cannot exceed 1000 characters']
   },
-  notes: {
+  return_type: {
     type: String,
     trim: true,
-    maxlength: [500, 'Notes cannot exceed 500 characters'],
     enum: {
       values: [
         'Damaged',
@@ -37,8 +36,14 @@ const returnRequestSchema = new mongoose.Schema({
         'Changed mind',
         'Other'
       ],
-      message: 'Notes must be one of the predefined values'
-    }
+      message: 'Return type must be one of the predefined values'
+    },
+    default: 'Other'
+  },
+  notes: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Notes cannot exceed 500 characters']
   },
   status: {
     type: String,

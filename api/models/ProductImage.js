@@ -43,14 +43,23 @@ productImageSchema.index({ product_id: 1, is_primary: 1 });
 
 // Pre-save middleware to ensure only one primary image per product
 productImageSchema.pre('save', async function(next) {
-  if (this.is_primary) {
+  // Only process if is_primary is explicitly set to true
+  if (this.is_primary === true) {
     try {
+      // Build query to exclude current document
+      const excludeQuery = { 
+        product_id: this.product_id
+      };
+      
+      // For new documents, _id exists but we still want to exclude it
+      // For existing documents, exclude by _id
+      if (this._id) {
+        excludeQuery._id = { $ne: this._id };
+      }
+      
       // Set all other images for this product to non-primary
       await this.constructor.updateMany(
-        { 
-          product_id: this.product_id, 
-          _id: { $ne: this._id } 
-        },
+        excludeQuery,
         { is_primary: false }
       );
     } catch (error) {

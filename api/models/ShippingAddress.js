@@ -62,6 +62,10 @@ const shippingAddressSchema = new mongoose.Schema({
   is_default: {
     type: Boolean,
     default: false
+  },
+  deleted_at: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: {
@@ -74,16 +78,18 @@ const shippingAddressSchema = new mongoose.Schema({
 shippingAddressSchema.index({ user_id: 1 });
 shippingAddressSchema.index({ is_default: 1 });
 shippingAddressSchema.index({ user_id: 1, is_default: 1 });
+shippingAddressSchema.index({ deleted_at: 1 });
 
 // Pre-save middleware to ensure only one default address per user
 shippingAddressSchema.pre('save', async function(next) {
   if (this.is_default) {
     try {
-      // Set all other addresses for this user to non-default
+      // Set all other non-deleted addresses for this user to non-default
       await this.constructor.updateMany(
         { 
           user_id: this.user_id, 
-          _id: { $ne: this._id } 
+          _id: { $ne: this._id },
+          deleted_at: null
         },
         { is_default: false }
       );
@@ -111,14 +117,14 @@ shippingAddressSchema.virtual('formatted_address').get(function() {
   return address;
 });
 
-// Static method to get default address for a user
+// Static method to get default address for a user (excluding soft-deleted)
 shippingAddressSchema.statics.getDefaultAddress = function(userId) {
-  return this.findOne({ user_id: userId, is_default: true });
+  return this.findOne({ user_id: userId, is_default: true, deleted_at: null });
 };
 
-// Static method to get all addresses for a user
+// Static method to get all addresses for a user (excluding soft-deleted)
 shippingAddressSchema.statics.getUserAddresses = function(userId) {
-  return this.find({ user_id: userId }).sort({ is_default: -1, created_at: 1 });
+  return this.find({ user_id: userId, deleted_at: null }).sort({ is_default: -1, created_at: 1 });
 };
 
 // Ensure virtual fields are serialized

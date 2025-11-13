@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const ProductImage = require('../models/ProductImage');
 const Category = require('../models/Category');
@@ -261,7 +262,7 @@ const addProduct = async (req, res) => {
           color: variationData.color,
           size: variationData.size,
           price: variationData.price,
-          stock_quantity: variationData.stock || 0,
+          stock_quantity: variationData.stock_quantity || 0,
           sku: variationData.sku || null,
           status: variationData.status || 'active'
         });
@@ -617,9 +618,9 @@ const getFeaturedProducts = async (req, res) => {
     const limit = 12; // Always return 12 products
     const { include_wishlist_status = false } = req.query;
     
-    // Check if user is authenticated and wishlist status is requested
+    // Include wishlist status automatically when user is authenticated
     const userId = req.user?._id;
-    const shouldIncludeWishlist = include_wishlist_status === 'true' && userId;
+    const shouldIncludeWishlist = !!userId;
     
     // First, try to get featured products
     let products = await Product.find({
@@ -1139,13 +1140,11 @@ const searchProducts = async (req, res) => {
       page = 1,
       limit = 20,
       
-      // Wishlist integration
-      include_wishlist_status = false
     } = req.query;
 
-    // Check if user is authenticated and wishlist status is requested
+    // Check if user is authenticated - always include wishlist status for authenticated users
     const userId = req.user?._id;
-    const shouldIncludeWishlist = include_wishlist_status === 'true' && userId;
+    const shouldIncludeWishlist = !!userId;
 
     const skip = (page - 1) * limit;
     
@@ -1214,11 +1213,14 @@ const searchProducts = async (req, res) => {
         }
       },
       
-      // Stage 4.5: Lookup wishlist status if user is authenticated and requested
+      // Stage 4.5: Lookup wishlist status if user is authenticated
       ...(shouldIncludeWishlist ? [{
         $lookup: {
           from: 'wishlists',
-          let: { productId: '$_id', userId: userId },
+          let: { 
+            productId: '$_id', 
+            userId: userId instanceof mongoose.Types.ObjectId ? userId : new mongoose.Types.ObjectId(userId.toString())
+          },
           pipeline: [
             { 
               $match: { 
@@ -1366,6 +1368,23 @@ const searchProducts = async (req, res) => {
           available_colors: 1,
           available_sizes: 1,
           primary_image: { $arrayElemAt: ['$primary_image', 0] },
+          variations: {
+            $map: {
+              input: '$variations',
+              as: 'variation',
+              in: {
+                _id: '$$variation._id',
+                color: '$$variation.color',
+                size: '$$variation.size',
+                price: '$$variation.price',
+                stock_quantity: '$$variation.stock_quantity',
+                sku: '$$variation.sku',
+                status: '$$variation.status',
+                created_at: '$$variation.created_at',
+                updated_at: '$$variation.updated_at'
+              }
+            }
+          },
           ...(search ? { searchScore: 1 } : {}),
           ...(shouldIncludeWishlist ? { is_in_wishlist: 1 } : {})
         }
@@ -1560,6 +1579,283 @@ const getUniqueVariationOptions = async (req, res) => {
   }
 };
 
+// 14.5. Get Public Product Details (Public API)
+const getPublicProductDetails = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user?._id; // Optional authentication for wishlist status
+    
+    // Find product - only published and not deleted for public access
+    const product = await Product.findOne({ 
+      _id: productId, 
+      deleted_at: null, 
+      status: 'published'
+    }).populate('category_id', 'name');
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found or not available'
+      });
+    }
+    
+    // Get comprehensive product data
+    const promises = [
+      ProductImage.getProductImages(productId),
+      ProductVariation.getProductVariations(productId),
+      ProductReview.getProductAverageRating(productId),
+      // Get reviews with user details (including profile_icon)
+      ProductReview.find({ product_id: productId })
+        .populate('user_id', 'first_name last_name email profile_icon')
+        .populate('order_id', 'order_number')
+        .sort({ created_at: -1 })
+        .limit(50),
+      // Get total sold count for this product
+      OrderItem.aggregate([
+        {
+          $lookup: {
+            from: 'orders',
+            localField: 'order_id',
+            foreignField: '_id',
+            as: 'order'
+          }
+        },
+        {
+          $unwind: '$order'
+        },
+        {
+          $match: {
+            product_id: new mongoose.Types.ObjectId(productId),
+            'order.order_status': 'delivered'
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalSold: { $sum: '$quantity' }
+          }
+        }
+      ])
+    ];
+
+    // Add wishlist check if user is authenticated
+    if (userId) {
+      promises.push(
+        Wishlist.findOne({ user_id: userId, product_id: productId })
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const productImages = results[0];
+    const variations = results[1];
+    const reviewSummary = results[2];
+    const reviewDetails = results[3];
+    const totalSold = results[4];
+    const wishlistItem = userId ? results[5] : null;
+    
+    // Get images for all reviews
+    const reviewIds = reviewDetails.map(review => review._id);
+    const reviewImages = await ReviewImage.getReviewsImages(reviewIds);
+    
+    // Attach images to reviews
+    const reviewsWithImages = reviewDetails.map(review => ({
+      ...review.toObject(),
+      images: reviewImages.filter(img => img.review_id.toString() === review._id.toString())
+    }));
+    
+    // Prepare comprehensive review data
+    const reviewData = reviewSummary.length > 0 ? reviewSummary[0] : { 
+      averageRating: 0, 
+      totalReviews: 0 
+    };
+    
+    // Get total sold count
+    const soldCount = totalSold.length > 0 ? totalSold[0].totalSold : 0;
+    
+    // Build product response
+    const productResponse = {
+      ...product.toObject(),
+      images: productImages,
+      variations: variations || [],
+      sold: soldCount
+    };
+
+    // Add wishlist status if user is authenticated
+    if (userId) {
+      productResponse.is_in_wishlist = !!wishlistItem;
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        product: productResponse,
+        reviews: {
+          summary: {
+            average_rating: reviewData.averageRating || 0,
+            total_reviews: reviewData.totalReviews || 0
+          },
+          details: reviewsWithImages
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching product details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product details',
+      error: error.message
+    });
+  }
+};
+
+// 15. Get Product Suggestions (Public API)
+const getProductSuggestions = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    
+    // Validate productId
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product ID is required'
+      });
+    }
+    
+    // Find the product to get its category
+    const product = await Product.findOne({
+      _id: productId,
+      deleted_at: null,
+      status: 'published'
+    }).populate('category_id', 'name');
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    const categoryId = product.category_id._id || product.category_id;
+    const categoryName = product.category_id.name || 'Unknown';
+    
+    // Count available products in the same category (excluding the current product)
+    const availableProductsCount = await Product.countDocuments({
+      _id: { $ne: productId },
+      category_id: categoryId,
+      deleted_at: null,
+      status: 'published'
+    });
+    
+    // Check if there are any products available
+    if (availableProductsCount === 0) {
+      return res.json({
+        success: true,
+        data: {
+          product_id: productId,
+          category_id: categoryId,
+          category_name: categoryName,
+          suggestions: [],
+          total_suggestions: 0,
+          message: 'No similar products found in this category'
+        }
+      });
+    }
+    
+    // Get up to 4 random products from the same category (excluding the current product)
+    const limit = Math.min(4, availableProductsCount);
+    const suggestedProducts = await Product.aggregate([
+      {
+        $match: {
+          _id: { $ne: productId },
+          category_id: categoryId,
+          deleted_at: null,
+          status: 'published'
+        }
+      },
+      { $sample: { size: limit } }, // MongoDB's random sampling
+      // Lookup category information
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'category_id',
+          foreignField: '_id',
+          as: 'category'
+        }
+      },
+      {
+        $unwind: {
+          path: '$category',
+          preserveNullAndEmptyArrays: true
+        }
+      }
+    ]);
+    
+    // Get comprehensive data for suggested products
+    const userId = req.user?._id;
+    const productsWithFullData = await Promise.all(
+      suggestedProducts.map(async (suggestedProduct) => {
+        // Convert ObjectId to string for methods that expect string IDs
+        const suggestedProductId = suggestedProduct._id.toString();
+        
+        const lookups = [
+          ProductImage.getPrimaryImage(suggestedProductId),
+          ProductImage.getProductImages(suggestedProductId),
+          ProductVariation.getProductVariations(suggestedProductId),
+          ProductReview.getProductAverageRating(suggestedProductId)
+        ];
+        // If authenticated, also fetch wishlist status
+        if (userId) {
+          lookups.push(
+            Wishlist.findOne({ user_id: userId, product_id: suggestedProductId })
+          );
+        }
+
+        const results = await Promise.all(lookups);
+        const [primaryImage, allImages, variations, reviewOverview, wishlistItem] = results;
+        
+        // Calculate review overview
+        const reviewData = reviewOverview.length > 0 ? reviewOverview[0] : { 
+          averageRating: 0, 
+          totalReviews: 0 
+        };
+        
+        return {
+          ...suggestedProduct,
+          primary_image: primaryImage || null,
+          all_images: allImages || [],
+          variations: variations || [],
+          review_overview: {
+            average_rating: reviewData.averageRating || 0,
+            total_reviews: reviewData.totalReviews || 0
+          },
+          category: suggestedProduct.category || null,
+          ...(userId ? { is_in_wishlist: !!wishlistItem } : {})
+        };
+      })
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        product_id: productId,
+        category_id: categoryId,
+        category_name: categoryName,
+        suggestions: productsWithFullData,
+        total_suggestions: productsWithFullData.length
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching product suggestions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product suggestions',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   addProduct,
@@ -1574,5 +1870,7 @@ module.exports = {
   deleteProductVariation,
   toggleFeaturedStatus,
   searchProducts,
-  getUniqueVariationOptions
+  getUniqueVariationOptions,
+  getProductSuggestions,
+  getPublicProductDetails
 }; 

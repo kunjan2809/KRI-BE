@@ -27,7 +27,7 @@ const uploadReview = multer({
 const uploadProductImage = async (req, res) => {
     try {
         const { productId } = req.params;
-        const { isPrimary } = req.body;
+        const { isPrimary, is_primary } = req.body; // Support both camelCase and snake_case
 
         // Validate productId
         if (!productId) {
@@ -57,25 +57,48 @@ const uploadProductImage = async (req, res) => {
         // Get Cloudinary URL from uploaded file
         const cloudinaryUrl = req.file.path;
 
-        // Create product image record
+        // Parse isPrimary value - handle various formats from form-data
+        // Form-data sends values as strings, so we need to handle: "true", "false", "1", "0", true, false, undefined
+        const primaryValue = isPrimary !== undefined ? isPrimary : is_primary;
+        let isPrimaryBoolean = false;
+        
+        if (primaryValue !== undefined && primaryValue !== null && primaryValue !== '') {
+            if (typeof primaryValue === 'boolean') {
+                isPrimaryBoolean = primaryValue;
+            } else if (typeof primaryValue === 'string') {
+                // Handle string values: "true", "false", "1", "0", "yes", "no"
+                const lowerValue = primaryValue.toLowerCase().trim();
+                isPrimaryBoolean = lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes';
+            } else if (typeof primaryValue === 'number') {
+                isPrimaryBoolean = primaryValue === 1;
+            }
+        }
+
+        // Create product image record with explicit is_primary value
         const productImage = new ProductImage({
             product_id: productId,
             image_url: cloudinaryUrl,
-            is_primary: isPrimary === 'true' || isPrimary === true
+            is_primary: isPrimaryBoolean
         });
 
+        // Explicitly set is_primary to ensure it's not overridden
+        productImage.is_primary = isPrimaryBoolean;
+
         const savedProductImage = await productImage.save();
+
+        // Fetch the saved image to ensure we have the latest data (after pre-save middleware)
+        const savedImage = await ProductImage.findById(savedProductImage._id);
 
         res.status(201).json({
             success: true,
             message: 'Product image uploaded successfully',
             data: {
                 image: {
-                    _id: productImage._id,
-                    product_id: productImage.product_id,
-                    image_url: productImage.image_url,
-                    is_primary: productImage.is_primary,
-                    created_at: productImage.created_at
+                    _id: savedImage._id,
+                    product_id: savedImage.product_id,
+                    image_url: savedImage.image_url,
+                    is_primary: savedImage.is_primary,
+                    created_at: savedImage.created_at
                 }
             }
         });

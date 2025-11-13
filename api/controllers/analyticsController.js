@@ -522,11 +522,59 @@ const getMonthlyRevenue = async (req, res) => {
   }
 };
 
+// 7. User Status Analytics: Total, Active, and Banned users count
+const getUserStatusAnalytics = async (req, res) => {
+  try {
+    // Validate request
+    if (req.method !== 'GET') {
+      return res.status(405).json({
+        success: false,
+        message: 'Method not allowed'
+      });
+    }
+    
+    // Count total users (excluding admins - only regular users)
+    const totalUsers = await User.countDocuments({
+      is_admin: false
+    });
+    
+    // Count active users (excluding admins)
+    const activeUsers = await User.countDocuments({
+      is_admin: false,
+      status: 'active'
+    });
+    
+    // Count banned users (excluding admins)
+    const bannedUsers = await User.countDocuments({
+      is_admin: false,
+      status: 'banned'
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        total_users: totalUsers,
+        active_users: activeUsers,
+        banned_users: bannedUsers
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching user status analytics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user status analytics',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getOrderAnalytics,
   getUserAnalytics,
   getCategoryOrderAnalytics,
   getYearlyOrderAnalytics,
   getDashboardSummary,
-  getMonthlyRevenue
+  getMonthlyRevenue,
+  getUserStatusAnalytics
 }; 

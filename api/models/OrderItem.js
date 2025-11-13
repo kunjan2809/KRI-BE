@@ -11,6 +11,12 @@ const orderItemSchema = new mongoose.Schema({
     ref: 'Product',
     required: [true, 'Product ID is required']
   },
+  variation_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductVariation',
+    default: null,
+    description: 'Optional product variation (size, color, etc.)'
+  },
   product_name_snapshot: {
     type: String,
     required: [true, 'Product name snapshot is required'],
@@ -42,6 +48,7 @@ const orderItemSchema = new mongoose.Schema({
 // Indexes for better query performance
 orderItemSchema.index({ order_id: 1 });
 orderItemSchema.index({ product_id: 1 });
+orderItemSchema.index({ variation_id: 1 });
 orderItemSchema.index({ order_id: 1, product_id: 1 });
 
 // Virtual for total item value

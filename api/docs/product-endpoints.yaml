@@ -859,8 +859,10 @@ paths:
       summary: Get all products with filters and sorting
       description: |
         Get all products with multiple criteria including price range, color, size, category, and sorting options.
-        This is a public API that does not require authentication.
+        Public API with optional authentication: if a Bearer token is provided, each product
+        includes an `is_in_wishlist` flag for the authenticated user.
         Search prioritizes product name matches over description matches for better relevance.
+        Each product includes all its active variations (color/size combinations) with pricing and stock information.
       parameters:
         - name: search
           in: query
@@ -947,14 +949,7 @@ paths:
             maximum: 100
             default: 20
             example: 20
-        - name: include_wishlist_status
-          in: query
-          description: Include wishlist status for authenticated users (requires Bearer token)
-          required: false
-          schema:
-            type: boolean
-            default: false
-            example: true
+        # Wishlist status is automatically included when user is authenticated (no query needed)
       security:
         - bearerAuth: []
       responses:
@@ -997,8 +992,36 @@ paths:
                                   items:
                                     type: string
                                   example: ["128GB", "256GB", "512GB"]
+                                variations:
+                                  type: array
+                                  description: Product variations (color/size combinations with pricing and stock). Only active variations (status: 'active', deleted_at: null) are included.
+                                  items:
+                                    $ref: '#/components/schemas/ProductVariation'
+                                  example:
+                                    - _id: "507f1f77bcf86cd799439015"
+                                      color: "Space Black"
+                                      size: "256GB"
+                                      price: 999.99
+                                      stock_quantity: 25
+                                      sku: "IPHONE15PRO-256GB-BLK"
+                                      status: "active"
+                                      created_at: "2024-01-15T10:30:00.000Z"
+                                      updated_at: "2024-01-15T10:30:00.000Z"
+                                    - _id: "507f1f77bcf86cd799439016"
+                                      color: "White"
+                                      size: "256GB"
+                                      price: 999.99
+                                      stock_quantity: 15
+                                      sku: "IPHONE15PRO-256GB-WHT"
+                                      status: "active"
+                                      created_at: "2024-01-15T10:30:00.000Z"
+                                      updated_at: "2024-01-15T10:30:00.000Z"
                                 primary_image:
                                   $ref: '#/components/schemas/ProductImage'
+                                is_in_wishlist:
+                                  type: boolean
+                                  description: Present when user is authenticated
+                                  example: false
                                 searchScore:
                                   type: number
                                   description: Search relevance score (only present when searching)
@@ -1087,6 +1110,7 @@ paths:
                         alt_text: "iPhone 15 Pro front view"
                         is_primary: true
                         sort_order: 1
+                      is_in_wishlist: false
                       searchScore: 100
                   pagination:
                     current_page: 1
@@ -1192,6 +1216,373 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Get Product Details (Public API)
+  /api/products/details/{productId}:
+    get:
+      tags:
+        - Products
+      summary: Get product details
+      description: |
+        Get comprehensive product details including all product data, images, variations, and reviews.
+        Public API with optional authentication: if a Bearer token is provided, the product includes
+        an `is_in_wishlist` flag for the authenticated user. Only published products are accessible.
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to view details
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Product details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailsResponse'
+              example:
+                success: true
+                data:
+                  product:
+                    _id: "507f1f77bcf86cd799439011"
+                    name: "iPhone 15 Pro"
+                    sku: "IPHONE15PRO-256GB"
+                    description: "Latest iPhone with advanced features and titanium design"
+                    product_description: "<p>Latest iPhone with <strong>advanced features</strong> and <em>titanium design</em></p><ul><li>48MP Main camera</li><li>A17 Pro chip</li><li>Titanium build</li><li>Action Button</li></ul>"
+                    price: 999.99
+                    mrp: 1099.99
+                    discount_type: null
+                    discount_rate: 0
+                    stock_quantity: 75
+                    weight: 0.187
+                    status: "published"
+                    category_id:
+                      _id: "507f1f77bcf86cd799439012"
+                      name: "Electronics"
+                    deleted_at: null
+                    final_price: 999.99
+                    discount_amount: 0
+                    in_stock: true
+                    sold: 125
+                    low_stock: false
+                    is_deleted: false
+                    is_in_wishlist: true
+                    created_at: "2024-01-15T10:30:00.000Z"
+                    edited_at: "2024-01-15T10:30:00.000Z"
+                    images:
+                      - _id: "507f1f77bcf86cd799439013"
+                        product_id: "507f1f77bcf86cd799439011"
+                        image_url: "/images/products/iphone15pro-1.jpg"
+                        alt_text: "iPhone 15 Pro front view"
+                        is_primary: true
+                        sort_order: 1
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        edited_at: "2024-01-15T10:30:00.000Z"
+                      - _id: "507f1f77bcf86cd799439014"
+                        product_id: "507f1f77bcf86cd799439011"
+                        image_url: "/images/products/iphone15pro-2.jpg"
+                        alt_text: "iPhone 15 Pro back view"
+                        is_primary: false
+                        sort_order: 2
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        edited_at: "2024-01-15T10:30:00.000Z"
+                    variations:
+                      - _id: "507f1f77bcf86cd799439015"
+                        product_id: "507f1f77bcf86cd799439011"
+                        color: "Space Black"
+                        size: "256GB"
+                        price: 999.99
+                        stock_quantity: 25
+                        sku: "IPHONE15PRO-256GB-BLK"
+                        status: "active"
+                        variation_name: "Space Black 256GB"
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        updated_at: "2024-01-15T10:30:00.000Z"
+                      - _id: "507f1f77bcf86cd799439016"
+                        product_id: "507f1f77bcf86cd799439011"
+                        color: "Natural Titanium"
+                        size: "256GB"
+                        price: 999.99
+                        stock_quantity: 30
+                        sku: "IPHONE15PRO-256GB-TIT"
+                        status: "active"
+                        variation_name: "Natural Titanium 256GB"
+                        created_at: "2024-01-15T10:30:00.000Z"
+                        updated_at: "2024-01-15T10:30:00.000Z"
+                  reviews:
+                    summary:
+                      average_rating: 4.5
+                      total_reviews: 12
+                    details:
+                      - _id: "507f1f77bcf86cd799439015"
+                        product_id: "507f1f77bcf86cd799439011"
+                        user_id:
+                          _id: "507f1f77bcf86cd799439016"
+                          first_name: "John"
+                          last_name: "Doe"
+                          email: "john.doe@example.com"
+                          profile_icon: "https://example.com/profile-icons/icon5.png"
+                          mobile_number: "+1234567890"
+                          is_admin: false
+                          full_name: "John Doe"
+                          created_at: "2024-01-10T08:00:00.000Z"
+                          edited_at: "2024-01-10T08:00:00.000Z"
+                        rating: 5
+                        rating_description: "Excellent product! The quality is outstanding and delivery was super fast."
+                        order_id: "507f1f77bcf86cd799439017"
+                        created_at: "2024-01-14T15:30:00.000Z"
+                        edited_at: "2024-01-14T15:30:00.000Z"
+                        images:
+                          - _id: "507f1f77bcf86cd799439018"
+                            review_id: "507f1f77bcf86cd799439015"
+                            image_url: "/images/reviews/review-1.jpg"
+                            created_at: "2024-01-14T15:30:00.000Z"
+        '404':
+          description: Product not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Product not found or not available"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Get Product Suggestions (Public API)
+  /api/products/suggestions/{productId}:
+    get:
+      tags:
+        - Products
+      summary: Get product suggestions
+      description: |
+        Get up to 4 random product suggestions from the same category as the specified product.
+        Returns products with their primary images, all images, variations, and review overviews.
+        Excludes the current product from suggestions. Returns published, non-deleted products only.
+        Public API with optional authentication: if a Bearer token is provided, each suggested product
+        includes an `is_in_wishlist` flag for the authenticated user.
+      parameters:
+        - name: productId
+          in: path
+          description: Product ID to get suggestions for
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Product suggestions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      product_id:
+                        type: string
+                        description: ID of the product for which suggestions were requested
+                        example: "507f1f77bcf86cd799439011"
+                      category_id:
+                        type: string
+                        description: Category ID of the product
+                        example: "507f1f77bcf86cd799439012"
+                      category_name:
+                        type: string
+                        description: Category name of the product
+                        example: "Electronics"
+                      suggestions:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Product'
+                            - type: object
+                              properties:
+                                primary_image:
+                                  $ref: '#/components/schemas/ProductImage'
+                                  nullable: true
+                                  description: Primary image for the product
+                                all_images:
+                                  type: array
+                                  items:
+                                    $ref: '#/components/schemas/ProductImage'
+                                  description: All images for the product
+                                variations:
+                                  type: array
+                                  items:
+                                    $ref: '#/components/schemas/ProductVariation'
+                                  description: Product variations
+                                review_overview:
+                                  type: object
+                                  properties:
+                                    average_rating:
+                                      type: number
+                                      example: 4.5
+                                    total_reviews:
+                                      type: integer
+                                      example: 23
+                                  description: Review summary information
+                                is_in_wishlist:
+                                  type: boolean
+                                  description: Included when user is authenticated
+                                  example: true
+                                category:
+                                  type: object
+                                  properties:
+                                    _id:
+                                      type: string
+                                      example: "507f1f77bcf86cd799439012"
+                                    name:
+                                      type: string
+                                      example: "Electronics"
+                                  description: Category information for the product
+                        maxItems: 4
+                      total_suggestions:
+                        type: integer
+                        description: Number of suggestions returned (0-4)
+                        example: 4
+              example:
+                success: true
+                data:
+                  product_id: "507f1f77bcf86cd799439011"
+                  category_id: "507f1f77bcf86cd799439012"
+                  category_name: "Electronics"
+                  suggestions:
+                    - _id: "507f1f77bcf86cd799439020"
+                      name: "Samsung Galaxy S24 Ultra"
+                      sku: "GALS24ULTRA-256GB"
+                      description: "Latest Galaxy with advanced features"
+                      product_description: "<p>Latest Galaxy with <strong>advanced features</strong></p>"
+                      price: 1099.99
+                      mrp: 1199.99
+                      discount_type: "percentage"
+                      discount_rate: 8.33
+                      stock_quantity: 50
+                      weight: 0.229
+                      status: "published"
+                      category_id: "507f1f77bcf86cd799439012"
+                      deleted_at: null
+                      featured: false
+                      category:
+                        _id: "507f1f77bcf86cd799439012"
+                        name: "Electronics"
+                      final_price: 1008.32
+                      discount_amount: 91.67
+                      in_stock: true
+                      low_stock: false
+                      is_deleted: false
+                      created_at: "2024-01-14T10:00:00.000Z"
+                      edited_at: "2024-01-14T10:00:00.000Z"
+                      primary_image:
+                        _id: "507f1f77bcf86cd799439021"
+                        product_id: "507f1f77bcf86cd799439020"
+                        image_url: "/images/products/galaxy-s24-ultra-1.jpg"
+                        alt_text: "Samsung Galaxy S24 Ultra"
+                        is_primary: true
+                        sort_order: 1
+                        created_at: "2024-01-14T10:00:00.000Z"
+                        edited_at: "2024-01-14T10:00:00.000Z"
+                      all_images:
+                        - _id: "507f1f77bcf86cd799439021"
+                          product_id: "507f1f77bcf86cd799439020"
+                          image_url: "/images/products/galaxy-s24-ultra-1.jpg"
+                          alt_text: "Samsung Galaxy S24 Ultra"
+                          is_primary: true
+                          sort_order: 1
+                          created_at: "2024-01-14T10:00:00.000Z"
+                          edited_at: "2024-01-14T10:00:00.000Z"
+                      is_in_wishlist: true
+                      variations: []
+                      review_overview:
+                        average_rating: 4.3
+                        total_reviews: 18
+                    - _id: "507f1f77bcf86cd799439022"
+                      name: "Google Pixel 8 Pro"
+                      sku: "PIXEL8PRO-256GB"
+                      description: "Pure Android experience with advanced AI"
+                      product_description: "<p>Pure Android experience with <strong>advanced AI</strong></p>"
+                      price: 899.99
+                      mrp: 999.99
+                      discount_type: "percentage"
+                      discount_rate: 10
+                      stock_quantity: 30
+                      weight: 0.213
+                      status: "published"
+                      category_id: "507f1f77bcf86cd799439012"
+                      deleted_at: null
+                      featured: true
+                      category:
+                        _id: "507f1f77bcf86cd799439012"
+                        name: "Electronics"
+                      final_price: 809.99
+                      discount_amount: 90.00
+                      in_stock: false
+                      low_stock: true
+                      is_deleted: false
+                      created_at: "2024-01-13T15:00:00.000Z"
+                      edited_at: "2024-01-13T15:00:00.000Z"
+                      primary_image:
+                        _id: "507f1f77bcf86cd799439023"
+                        product_id: "507f1f77bcf86cd799439022"
+                        image_url: "/images/products/pixel-8-pro-1.jpg"
+                        alt_text: "Google Pixel 8 Pro"
+                        is_primary: true
+                        sort_order: 1
+                        created_at: "2024-01-13T15:00:00.000Z"
+                        edited_at: "2024-01-13T15:00:00.000Z"
+                      all_images:
+                        - _id: "507f1f77bcf86cd799439023"
+                          product_id: "507f1f77bcf86cd799439022"
+                          image_url: "/images/products/pixel-8-pro-1.jpg"
+                          alt_text: "Google Pixel 8 Pro"
+                          is_primary: true
+                          sort_order: 1
+                          created_at: "2024-01-13T15:00:00.000Z"
+                          edited_at: "2024-01-13T15:00:00.000Z"
+                      is_in_wishlist: false
+                      variations: []
+                      review_overview:
+                        average_rating: 4.7
+                        total_reviews: 42
+                  total_suggestions: 2
+        '400':
+          description: Bad request - Invalid product ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Product ID is required"
+        '404':
+          description: Product not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Product not found"
         '500':
           description: Internal server error
           content:
