@@ -262,7 +262,7 @@ const addProduct = async (req, res) => {
           color: variationData.color,
           size: variationData.size,
           price: variationData.price,
-          stock_quantity: variationData.stock || 0,
+          stock_quantity: variationData.stock_quantity || 0,
           sku: variationData.sku || null,
           status: variationData.status || 'active'
         });
