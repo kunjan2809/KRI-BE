@@ -1368,6 +1368,23 @@ const searchProducts = async (req, res) => {
           available_colors: 1,
           available_sizes: 1,
           primary_image: { $arrayElemAt: ['$primary_image', 0] },
+          variations: {
+            $map: {
+              input: '$variations',
+              as: 'variation',
+              in: {
+                _id: '$$variation._id',
+                color: '$$variation.color',
+                size: '$$variation.size',
+                price: '$$variation.price',
+                stock_quantity: '$$variation.stock_quantity',
+                sku: '$$variation.sku',
+                status: '$$variation.status',
+                created_at: '$$variation.created_at',
+                updated_at: '$$variation.updated_at'
+              }
+            }
+          },
           ...(search ? { searchScore: 1 } : {}),
           ...(shouldIncludeWishlist ? { is_in_wishlist: 1 } : {})
         }

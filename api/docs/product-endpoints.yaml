@@ -862,6 +862,7 @@ paths:
         Public API with optional authentication: if a Bearer token is provided, each product
         includes an `is_in_wishlist` flag for the authenticated user.
         Search prioritizes product name matches over description matches for better relevance.
+        Each product includes all its active variations (color/size combinations) with pricing and stock information.
       parameters:
         - name: search
           in: query
@@ -991,6 +992,30 @@ paths:
                                   items:
                                     type: string
                                   example: ["128GB", "256GB", "512GB"]
+                                variations:
+                                  type: array
+                                  description: Product variations (color/size combinations with pricing and stock). Only active variations (status: 'active', deleted_at: null) are included.
+                                  items:
+                                    $ref: '#/components/schemas/ProductVariation'
+                                  example:
+                                    - _id: "507f1f77bcf86cd799439015"
+                                      color: "Space Black"
+                                      size: "256GB"
+                                      price: 999.99
+                                      stock_quantity: 25
+                                      sku: "IPHONE15PRO-256GB-BLK"
+                                      status: "active"
+                                      created_at: "2024-01-15T10:30:00.000Z"
+                                      updated_at: "2024-01-15T10:30:00.000Z"
+                                    - _id: "507f1f77bcf86cd799439016"
+                                      color: "White"
+                                      size: "256GB"
+                                      price: 999.99
+                                      stock_quantity: 15
+                                      sku: "IPHONE15PRO-256GB-WHT"
+                                      status: "active"
+                                      created_at: "2024-01-15T10:30:00.000Z"
+                                      updated_at: "2024-01-15T10:30:00.000Z"
                                 primary_image:
                                   $ref: '#/components/schemas/ProductImage'
                                 is_in_wishlist:
