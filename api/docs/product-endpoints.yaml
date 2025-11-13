@@ -889,11 +889,18 @@ paths:
             example: 1000
         - name: color
           in: query
-          description: Filter by exact product variation color match
+          description: Filter by product variation color(s). Can be a single color string or multiple colors as an array (e.g., color[]=Black&color[]=White)
           required: false
           schema:
-            type: string
-            example: "Black"
+            oneOf:
+              - type: string
+                example: "Black"
+              - type: array
+                items:
+                  type: string
+                example: ["Black", "White", "Blue"]
+          style: form
+          explode: true
         - name: size
           in: query
           description: Filter by exact product variation size match
@@ -1054,8 +1061,13 @@ paths:
                             type: number
                             example: 1000
                           color:
-                            type: string
-                            example: "Black"
+                            oneOf:
+                              - type: string
+                                example: "Black"
+                              - type: array
+                                items:
+                                  type: string
+                                example: ["Black", "White"]
                           size:
                             type: string
                             example: "256GB"

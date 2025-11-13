@@ -1142,6 +1142,16 @@ const searchProducts = async (req, res) => {
       
     } = req.query;
 
+    // Normalize color to array (support both string and array)
+    let colorArray = [];
+    if (color) {
+      if (Array.isArray(color)) {
+        colorArray = color.map(c => c.trim()).filter(c => c.length > 0);
+      } else {
+        colorArray = [color.trim()].filter(c => c.length > 0);
+      }
+    }
+
     // Check if user is authenticated - always include wishlist status for authenticated users
     const userId = req.user?._id;
     const shouldIncludeWishlist = !!userId;
@@ -1266,10 +1276,10 @@ const searchProducts = async (req, res) => {
         }
       },
       
-      // Stage 6: Apply color filter if specified (exact match)
-      ...(color ? [{
+      // Stage 6: Apply color filter if specified (supports multiple colors)
+      ...(colorArray.length > 0 ? [{
         $match: {
-          'variations.color': color.trim()
+          'variations.color': { $in: colorArray }
         }
       }] : []),
       
@@ -1438,7 +1448,7 @@ const searchProducts = async (req, res) => {
           category_name: { $arrayElemAt: ['$category.name', 0] }
         }
       },
-      ...(color ? [{ $match: { 'variations.color': color.trim() } }] : []),
+      ...(colorArray.length > 0 ? [{ $match: { 'variations.color': { $in: colorArray } } }] : []),
       ...(size ? [{ $match: { 'variations.size': size.trim() } }] : []),
       ...(search ? [{
         $match: {
@@ -1469,7 +1479,7 @@ const searchProducts = async (req, res) => {
           search,
           min_price,
           max_price,
-          color,
+          color: colorArray.length > 0 ? colorArray : (color || undefined),
           size,
           category_id
         },
