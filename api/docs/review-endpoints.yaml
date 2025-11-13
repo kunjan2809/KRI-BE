@@ -26,8 +26,7 @@ paths:
       description: |
         Retrieve all reviews for a specific product with images and metadata.
         Returns review summary statistics and detailed review data with user information.
-      security:
-        - bearerAuth: []
+        Public API - no authentication required.
       parameters:
         - name: productId
           in: path
