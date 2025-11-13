@@ -1001,7 +1001,9 @@ paths:
                                   example: ["128GB", "256GB", "512GB"]
                                 variations:
                                   type: array
-                                  description: Product variations (color/size combinations with pricing and stock). Only active variations (status: 'active', deleted_at: null) are included.
+                                  description: |
+                                    Product variations (color/size combinations with pricing and stock).
+                                    Only active variations (status: active, deleted_at: null) are included.
                                   items:
                                     $ref: '#/components/schemas/ProductVariation'
                                   example:
