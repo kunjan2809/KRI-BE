@@ -105,6 +105,14 @@ const login = async (req, res) => {
       });
     }
 
+    // Check if user is banned
+    if (user.status === 'banned') {
+      return res.status(403).json({
+        success: false,
+        message: 'User is banned'
+      });
+    }
+
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {

@@ -186,6 +186,15 @@ paths:
               example:
                 success: false
                 message: "Invalid email or password"
+        '403':
+          description: Forbidden - user is banned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "User is banned"
         '500':
           description: Internal server error
           content:
