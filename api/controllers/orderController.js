@@ -1074,6 +1074,83 @@ const getOrderDetailsAdmin = async (req, res) => {
   }
 };
 
+// 10. Get Order Statistics by Status (Admin only)
+const getOrderStatisticsByStatus = async (req, res) => {
+  try {
+    // Use aggregation to group orders by status and get counts
+    const statusStatistics = await Order.aggregate([
+      {
+        $group: {
+          _id: '$order_status',
+          count: { $sum: 1 },
+          total_revenue: { $sum: '$total_amount' }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]);
+
+    // Define all possible statuses with their display names
+    const statusMap = {
+      'pending': 'Pending',
+      'shipped': 'Shipped',
+      'cancelled': 'Cancelled',
+      'delivered': 'Delivered',
+      'return': 'Return Requested'
+    };
+
+    // Initialize all statuses with 0 count
+    const allStatuses = Object.keys(statusMap);
+    const statusData = {};
+    let totalOrders = 0;
+    let totalRevenue = 0;
+
+    // Initialize all statuses
+    allStatuses.forEach(status => {
+      statusData[status] = {
+        status: status,
+        display_name: statusMap[status],
+        count: 0,
+        total_revenue: 0
+      };
+    });
+
+    // Fill in actual data from aggregation results
+    statusStatistics.forEach(stat => {
+      if (statusData[stat._id]) {
+        statusData[stat._id].count = stat.count;
+        statusData[stat._id].total_revenue = Math.round(stat.total_revenue * 100) / 100;
+        totalOrders += stat.count;
+        totalRevenue += stat.total_revenue;
+      }
+    });
+
+    // Convert to array format for easier consumption
+    const statusArray = allStatuses.map(status => statusData[status]);
+
+    res.json({
+      success: true,
+      message: 'Order statistics retrieved successfully',
+      data: {
+        summary: {
+          total_orders: totalOrders,
+          total_revenue: Math.round(totalRevenue * 100) / 100
+        },
+        by_status: statusArray
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching order statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order statistics',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   placeOrder,
   getUserOrders,
@@ -1083,5 +1160,6 @@ module.exports = {
   createReturnRequest,
   getUserReturnRequests,
   getAllOrders,
-  getOrderDetailsAdmin
+  getOrderDetailsAdmin,
+  getOrderStatisticsByStatus
 };

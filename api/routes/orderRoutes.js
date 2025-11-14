@@ -21,6 +21,10 @@ router.get('/returns', auth('user'), orderController.getUserReturnRequests);
 // GET /api/orders/admin/all?page=1&limit=20&order_status=pending&payment_status=paid&search=ORD-2024&sort_by=created_at&sort_order=desc
 router.get('/admin/all', auth('admin'), orderController.getAllOrders);
 
+// 4.5. Get Order Statistics by Status (Admin only)
+// GET /api/orders/admin/statistics/order-status
+router.get('/admin/statistics/order-status', auth('admin'), orderController.getOrderStatisticsByStatus);
+
 // 5. Get Order Details by ID (Admin only) - Admin can view any order
 // GET /api/orders/admin/:orderId
 router.get('/admin/:orderId', auth('admin'), orderController.getOrderDetailsAdmin);
