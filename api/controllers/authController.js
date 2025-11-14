@@ -46,15 +46,16 @@ const signup = async (req, res) => {
 
     await user.save();
 
-    // Send welcome email (optional)
-    try {
-      await sendWelcomeEmail(email, first_name);
-    } catch (emailError) {
-      console.log('Welcome email failed to send:', emailError.message);
-    }
-
     // Generate token
     const token = generateToken(user._id);
+
+    // Send welcome email asynchronously (don't wait for it)
+    // This prevents blocking the signup response if email service is slow
+    sendWelcomeEmail(email, first_name).catch(emailError => {
+      console.log('Welcome email failed to send:', emailError.message);
+    });
+
+    // Respond immediately without waiting for email
 
     res.status(201).json({
       success: true,

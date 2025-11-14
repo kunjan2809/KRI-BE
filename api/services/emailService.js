@@ -9,7 +9,15 @@ const emailConfig = {
   auth: {
     user: config.EMAIL_USER,
     pass: config.EMAIL_PASS
-  }
+  },
+  // Add timeout settings to prevent long waits
+  connectionTimeout: 10000, // 10 seconds to establish connection
+  greetingTimeout: 10000, // 10 seconds for SMTP greeting
+  socketTimeout: 10000, // 10 seconds for socket inactivity
+  // Retry configuration
+  pool: true, // Use connection pooling
+  maxConnections: 5,
+  maxMessages: 100
 };
 
 // Create transporter
