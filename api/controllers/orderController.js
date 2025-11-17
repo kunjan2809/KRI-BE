@@ -954,9 +954,30 @@ const getAllOrders = async (req, res) => {
           .populate('product_id', 'name sku')
           .populate('variation_id', 'color size');
 
+        // Enhance order items with primary image
+        const orderItemsWithDetails = await Promise.all(
+          orderItems.map(async (item) => {
+            const itemObj = item.toObject();
+            const product = item.product_id;
+            
+            // Get primary image for the product
+            const primaryImage = await ProductImage.getPrimaryImage(product._id);
+            
+            return {
+              ...itemObj,
+              primary_image: primaryImage ? {
+                _id: primaryImage._id,
+                image_url: primaryImage.image_url,
+                alt_text: primaryImage.alt_text,
+                is_primary: primaryImage.is_primary
+              } : null
+            };
+          })
+        );
+
         return {
           ...populatedOrder.toObject(),
-          order_items: orderItems
+          order_items: orderItemsWithDetails
         };
       })
     );
